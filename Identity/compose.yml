@@ -1,0 +1,52 @@
+services:
+  auth-app:
+    build: .
+    container_name: auth-microservice-app
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@auth-db:5432/${DB_NAME}
+    depends_on:
+      - auth-db
+    networks:
+      - auth-net
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: bun.lockb 
+    command: bun run dev
+
+  auth-db:
+    image: postgres:alpine3.22
+    container_name: auth-microservice-db
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - auth-net
+
+volumes:
+  postgres_data:
+
+networks:
+  auth-net:
