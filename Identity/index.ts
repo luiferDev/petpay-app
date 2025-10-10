@@ -4,7 +4,7 @@ import 'dotenv/config';
 
 // 1. Inicializar la aplicación Express
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 
 // Middlewares
 app.use(express.json());
