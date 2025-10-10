@@ -23,4 +23,4 @@ ENTRYPOINT [ "bun", "run" ]
 
 # Define el CMD: Son los argumentos predeterminados para el ENTRYPOINT.
 # Si no se especifican argumentos al ejecutar docker run, se usará "start".
-CMD [ "start" ]
+CMD [ "dev" ]
