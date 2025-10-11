@@ -4,12 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run index.ts",
-    "dev": "bun --watch index.ts",
+    "start": "bun run server/index.ts",
+    "dev": "bun --watch server/index.ts",
     "lint": "ts-standard",
     "lint:fix": "ts-standard --fix"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
