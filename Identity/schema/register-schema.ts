@@ -2,13 +2,13 @@ import { z } from 'zod'
 
 // --- ENUMS DE DOMINIO ---
 // Zod necesita sus propias enumeraciones para validación
-const roleEnumZod = z.enum(['CLIENT', 'SERVICE_PROVIDER', 'ADMIN'])
+// const roleEnumZod = z.enum(['CLIENT', 'SERVICE_PROVIDER', 'ADMIN'])
 const accountTypeEnumZod = z.enum(['INDIVIDUAL', 'FAMILY', 'BUSINESS'])
 
 // -------------------- 1. Esquema de Registro de Usuarios --------------------
 
 // Define el patrón de contraseña (mínimo 8 caracteres, al menos una mayúscula, un número y un símbolo)
-const passwordRegex = new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})')
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/
 
 export const userRegisterSchema = z.object({
   // Email: Requerido, formato email, máx 255

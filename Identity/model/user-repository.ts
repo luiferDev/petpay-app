@@ -1,5 +1,4 @@
-import { db } from './schema' // Asumiendo que tu archivo de esquema se llama 'schema.ts' y exporta 'db'
-import { users, accounts, accountUsers, userRoles } from './schema' // Importa todas las tablas necesarias
+import { db, users, accounts, accountUsers, userRoles } from './schema' // Importa todas las tablas necesarias
 import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema' // Tipos de Zod
 import { InferInsertModel } from 'drizzle-orm'
 import { hash } from 'bcrypt'
@@ -21,7 +20,7 @@ export class UserRepository {
      * @param accountData Datos validados para la cuenta inicial.
      * @returns Un objeto que contiene el ID del nuevo usuario y el ID de la cuenta.
      */
-  public static async registerUser(
+  public static async registerUser (
     userData: UserRegisterInput,
     accountData: AccountCreateInput
   ): Promise<{ userId: string, accountId: number }> {
@@ -36,7 +35,7 @@ export class UserRepository {
       passwordHash,
       firstName: userData.firstName,
       lastName: userData.lastName,
-      phone: userData.phone || null,
+      phone: userData.phone ?? null,
       isVerified: false,
       createdAt: new Date(),
       updatedAt: new Date()

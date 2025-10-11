@@ -7,13 +7,13 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 
 // 1. Configura la conexión de la DB
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: process.env.DATABASE_URL,
   // Puedes añadir ssl: true para producción
   ssl: false
 })
 const db = drizzle(pool)
 
-async function runMigrations () {
+async function runMigrations (): Promise<void> {
   console.log('🚀 Iniciando migraciones...')
   try {
     // La función migrate toma la instancia de DB y la ruta a tu carpeta de migraciones
@@ -29,4 +29,4 @@ async function runMigrations () {
   }
 }
 
-runMigrations()
+void runMigrations()
