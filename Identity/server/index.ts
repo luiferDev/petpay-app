@@ -16,6 +16,7 @@ app.get('/', (req: Request, res: Response) => {
   res.send('¡Hola desde Express y Bun! 🚀')
 })
 
+// La ruta para probar la app es /auth/register
 app.use('/auth', router)
 
 // Iniciar el servidor
