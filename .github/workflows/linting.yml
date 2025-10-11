@@ -3,8 +3,10 @@ name: Lint Code
 on:
   pull_request:
     branches: [main, develop]
+    paths: ['Identity/**']
   push:
     branches: [main, develop]
+    paths: ['Identity/**']
 
 jobs:
   lint:
