@@ -4,11 +4,11 @@ import {
   boolean,
   timestamp,
   pgEnum,
-  index,
   serial,
   integer,
   doublePrecision,
   primaryKey,
+  uniqueIndex,
   unique
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
@@ -34,7 +34,6 @@ export const permissionLevelEnum = pgEnum('permission_level', ['READ', 'WRITE', 
 export const users = pgTable('users', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  // IMPORTANTE: Cambié el nombre a 'password_hash' para reflejar el almacenamiento seguro
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
@@ -42,12 +41,9 @@ export const users = pgTable('users', {
   isVerified: boolean('is_verified').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-}, (table) => {
-  // ✅ ÍNDICE CORREGIDO (Definido en el callback)
-  return {
-    emailIdx: index('email_idx').on(table.email)
-  }
-})
+}, (table) => [
+  uniqueIndex('email_idx').on(table.email)
+])
 
 export const accounts = pgTable('accounts', {
   id: serial('id').primaryKey(),
@@ -78,12 +74,9 @@ export const userRoles = pgTable('user_roles', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   role: roleEnum('role').notNull()
-}, (table) => {
-  // ✅ CLAVE PRIMARIA COMPUESTA CORREGIDA (Definida en el callback)
-  return {
-    pk: primaryKey({ columns: [table.userId, table.role] })
-  }
-})
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.role] })
+])
 
 export const accountUsers = pgTable('account_users', {
   id: serial('id').primaryKey(),
@@ -96,12 +89,9 @@ export const accountUsers = pgTable('account_users', {
   permissionLevel: permissionLevelEnum('permission_level').notNull(),
   joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
   isActive: boolean('is_active').default(true).notNull()
-}, (table) => {
-  // ✅ RESTRICCIÓN ÚNICA CORREGIDA (Definida en el callback)
-  return {
-    accountUserUnique: unique('account_user_unique').on(table.accountId, table.userId)
-  }
-})
+}, (table) => [
+  unique('account_user_unique').on(table.accountId, table.userId)
+])
 
 // -------------------- RELACIONES (Relations) --------------------
 // Estas estructuras están correctas y no deben moverse.
