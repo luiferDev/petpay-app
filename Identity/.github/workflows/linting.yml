@@ -1,0 +1,26 @@
+name: Lint Code
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install
+        working-directory: ./Identity
+        
+      - name: Run linter
+        run: bun run lint
+        working-directory: ./Identity
