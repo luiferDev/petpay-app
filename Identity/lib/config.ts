@@ -1,5 +1,5 @@
 export const {
-  PORT = 3030,
+  PORT = 3000,
   SALT_ROUNDS = 10,
-  JWT_SECRET = 'default-secret' // change to .env file
+  JWT_SECRET = 'default-secret' // change it to .env file
 } = process.env
