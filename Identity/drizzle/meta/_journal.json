@@ -15,6 +15,13 @@
       "when": 1760030264224,
       "tag": "0001_happy_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760243060920,
+      "tag": "0002_many_ego",
+      "breakpoints": true
     }
   ]
 }
