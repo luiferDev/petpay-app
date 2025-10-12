@@ -1,5 +1,3 @@
-// src/infrastructure/persistence/user.adapter.ts
-
 import { IUserRepository } from '../../core/domain/ports/user.repository'
 import { db, users, accounts, accountUsers, userRoles } from './schemas'
 import { UserRegisterInput, AccountCreateInput } from '../web/validations/register.validation'

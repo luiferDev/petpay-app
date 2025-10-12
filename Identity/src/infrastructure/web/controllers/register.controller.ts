@@ -1,5 +1,3 @@
-// src/infrastructure/web/controllers/register.controller.ts
-
 import { Request, Response, NextFunction } from 'express'
 import { RegistrationService } from '../../../core/application/registration.service'
 import { fullRegistrationRequestSchema } from '../validations/register.validation'

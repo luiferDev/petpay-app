@@ -1,4 +1,3 @@
-// src/infrastructure/shared/logger.ts
 import { createLogger, format, transports } from 'winston'
 import type { TransformableInfo } from 'logform'
 

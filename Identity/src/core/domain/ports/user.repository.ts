@@ -1,5 +1,3 @@
-// Define el CONTRATO: Lo que el caso de uso NECESITA
-
 import { AccountCreateInput, UserRegisterInput } from '../../../infrastructure/web/validations/register.validation'
 
 export interface IUserRepository {

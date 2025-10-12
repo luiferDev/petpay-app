@@ -1,12 +1,7 @@
-// src/core/application/registration.service.ts
-
-// Dependencia del PUERTO (Contrato)
 import { IUserRepository } from '../domain/ports/user.repository'
 import { FullRegistrationRequestInput } from '../../infrastructure/web/validations/register.validation'
 import { z } from 'zod'
-import { logger } from '../../infrastructure/shared/logger'
-
-
+import { logger } from '../../core/infrastructure/shared/logger'
 
 export class RegistrationService {
   // El constructor ahora recibe una implementación de la interfaz
@@ -22,7 +17,7 @@ export class RegistrationService {
       // 2. Lógica de negocio (ej. verificar si el email ya existe)
       logger.debug('🔍 Verificando si el email ya existe:', { email: validatedData.email })
       const existingUser = await this.userRepository.findByEmail(validatedData.email)
-      
+
       if (existingUser !== null) {
         logger.warn('⚠️ Email ya registrado:', { email: validatedData.email })
         return { status: 409, message: 'El correo electrónico ya está registrado.' }

@@ -1,5 +1,3 @@
-// src/infrastructure/web/routes.ts
-
 import { Router } from 'express'
 import { RegistrationService } from '../../../core/application/registration.service'
 import { registerController } from '../controllers/register.controller'
