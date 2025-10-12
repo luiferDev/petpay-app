@@ -1,10 +1,8 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
-// ⚠️ RUTAS CORREGIDAS
-import { corsMiddleware } from '../src/infrastructure/shared/middlewares/cors'
+import { corsMiddleware } from '../src/core/infrastructure/shared/middlewares/cors'
 import { PORT } from '../lib/config'
 import 'dotenv/config'
-// ⚠️ El router ahora es una función, no un objeto
-import authRouter from '../src/infrastructure/web/routes/routes'
+import authRouter from '../src/core/infrastructure/web/routes/routes'
 import expressWinston from 'express-winston'
 
 // ----------------------------------------------------
@@ -12,8 +10,8 @@ import expressWinston from 'express-winston'
 // ----------------------------------------------------
 import { DrizzleUserRepository } from '../src/infrastructure/persistence/user.adapter' // Implementación Drizzle
 import { RegistrationService } from '../src/core/application/registration.service' // Caso de Uso
-import { getDatabase } from '../src/infrastructure/shared/db.config' // Conexión DB
-import { logger } from '../src/infrastructure/shared/logger'
+import { getDatabase } from '../src/core/infrastructure/shared/db.config' // Conexión DB
+import { logger } from '../src/core/infrastructure/shared/logger'
 
 // **PASO 1:** Inicializar la conexión a la DB y asegurar que está lista.
 // Esto ejecuta getDatabase, que crea el Pool y la instancia de Drizzle.
