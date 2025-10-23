@@ -1,13 +1,15 @@
-import { db, users, accounts, accountUsers, userRoles } from './schema' // Importa todas las tablas necesarias
-import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema' // Tipos de Zod
-import { InferInsertModel, eq } from 'drizzle-orm'
+import { db, users, accounts, accountUsers, userRoles } from './schema'
+import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema'
+import { InferInsertModel, InferSelectModel, eq } from 'drizzle-orm'
 import { compare, hash } from 'bcrypt'
 import { SALT_ROUNDS } from '../lib/config'
 import { LoginInput } from '../schema/login-schema'
 import { logger } from '../lib/logger'
 
-// Infiere los tipos de inserción de Drizzle para las tablas principales
+// Tipos de Drizzle
 type InsertUser = InferInsertModel<typeof users>
+type SelectUser = InferSelectModel<typeof users>
+type SelectUserRole = InferSelectModel<typeof userRoles>
 type InsertAccount = InferInsertModel<typeof accounts>
 type InsertAccountUser = InferInsertModel<typeof accountUsers>
 type InsertUserRole = InferInsertModel<typeof userRoles>
@@ -25,7 +27,7 @@ export class UserRepository {
   public static async registerUser(
     userData: UserRegisterInput,
     accountData: AccountCreateInput
-  ): Promise<{ userId: string, accountId: number }> {
+  ): Promise<{ userId: string, accountId: number, role: string }> {
     // 1. Hashear la contraseña
     const id = crypto.randomUUID()
     const passwordHash = await hash(userData.passwordHash, SALT_ROUNDS)
@@ -75,15 +77,18 @@ export class UserRepository {
       // Retornar IDs si todas las operaciones fueron exitosas
       return {
         userId: newUser.id,
-        accountId: newAccount.id
+        accountId: newAccount.id,
+        role: userRoleToInsert.role
       }
     })
   }
 
-  public static async loginUser({email, passwordHash}: LoginInput) {
+  public static async loginUser({ email, passwordHash }: LoginInput) {
     logger.info('Buscando usuario', { email })
     const [user] = await db.select().from(users)
       .where(eq(users.email, email))
+    const [role] = await db.select({ role: userRoles.role }).from(users)
+      .rightJoin(userRoles, eq(users.id, userRoles.userId))
 
     if (!user) {
       logger.warn('Usuario no encontrado', { email })
@@ -91,20 +96,33 @@ export class UserRepository {
       logger.debug('Usuarios en la base de datos', { count: allUsers.length })
       throw new Error('Usuario no existe')
     }
-    
+
     logger.info('Usuario encontrado, verificando contraseña')
     const isValidPassword = await compare(passwordHash, user.passwordHash)
-    
+
     if (!isValidPassword) {
       logger.warn('Contraseña incorrecta', { email })
       throw new Error('Contraseña incorrecta')
     }
-    
+
     logger.info('Login exitoso', { userId: user.id })
-    return user
+    return { user, role }
   }
 
   public static async getAllUsers() {
     return await db.select({ id: users.id, email: users.email }).from(users)
+  }
+
+  public static async verifyUser(userId: string) {
+    const [updatedUser] = await db.update(users)
+      .set({ isVerified: true, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning({ id: users.id, email: users.email, isVerified: users.isVerified })
+
+    if (!updatedUser) {
+      throw new Error('Usuario no encontrado')
+    }
+
+    return updatedUser
   }
 }
