@@ -50,4 +50,3 @@ export const sendVerificationEmail = async (
     return { success: false, error }
   }
 }
-g

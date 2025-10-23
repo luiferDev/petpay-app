@@ -27,7 +27,7 @@ export class AuthService {
       const verificationLink = `http://localhost:3000/auth/verify/${userId}`
       sendVerificationEmail(userData.email, userData.firstName, verificationLink)
         .then(() => logger.info('Correo de verificación enviado', { userId }))
-        .catch((error) => logger.error('Error al enviar el correo de verificación', { userId, error }))
+        .catch((error: unknown) => logger.error('Error al enviar el correo de verificación', { userId, error }))
 
       return {
         status: 201,
@@ -63,7 +63,7 @@ export class AuthService {
       return {
         status: 200,
         message: 'Login exitoso.',
-        data: { userId: user.id, email: user.email, role: role },
+        data: { userId: user.id, email: user.email, role: roles },
         token
       }
     } catch (error) {
