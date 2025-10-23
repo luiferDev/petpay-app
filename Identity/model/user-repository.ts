@@ -1,8 +1,10 @@
 import { db, users, accounts, accountUsers, userRoles } from './schema' // Importa todas las tablas necesarias
 import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema' // Tipos de Zod
-import { InferInsertModel } from 'drizzle-orm'
-import { hash } from 'bcrypt'
+import { InferInsertModel, eq } from 'drizzle-orm'
+import { compare, hash } from 'bcrypt'
 import { SALT_ROUNDS } from '../lib/config'
+import { LoginInput } from '../schema/login-schema'
+import { logger } from '../lib/logger'
 
 // Infiere los tipos de inserción de Drizzle para las tablas principales
 type InsertUser = InferInsertModel<typeof users>
@@ -20,7 +22,7 @@ export class UserRepository {
      * @param accountData Datos validados para la cuenta inicial.
      * @returns Un objeto que contiene el ID del nuevo usuario y el ID de la cuenta.
      */
-  public static async registerUser (
+  public static async registerUser(
     userData: UserRegisterInput,
     accountData: AccountCreateInput
   ): Promise<{ userId: string, accountId: number }> {
@@ -76,5 +78,33 @@ export class UserRepository {
         accountId: newAccount.id
       }
     })
+  }
+
+  public static async loginUser({email, passwordHash}: LoginInput) {
+    logger.info('Buscando usuario', { email })
+    const [user] = await db.select().from(users)
+      .where(eq(users.email, email))
+
+    if (!user) {
+      logger.warn('Usuario no encontrado', { email })
+      const allUsers = await db.select({ email: users.email }).from(users)
+      logger.debug('Usuarios en la base de datos', { count: allUsers.length })
+      throw new Error('Usuario no existe')
+    }
+    
+    logger.info('Usuario encontrado, verificando contraseña')
+    const isValidPassword = await compare(passwordHash, user.passwordHash)
+    
+    if (!isValidPassword) {
+      logger.warn('Contraseña incorrecta', { email })
+      throw new Error('Contraseña incorrecta')
+    }
+    
+    logger.info('Login exitoso', { userId: user.id })
+    return user
+  }
+
+  public static async getAllUsers() {
+    return await db.select({ id: users.id, email: users.email }).from(users)
   }
 }
