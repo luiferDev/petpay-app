@@ -63,7 +63,7 @@ export class AuthService {
       return {
         status: 200,
         message: 'Login exitoso.',
-        data: { userId: user.id, email: user.email, role: roles },
+        data: { userId: user.id, email: user.email, role: role },
         token
       }
     } catch (error) {
