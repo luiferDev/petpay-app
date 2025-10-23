@@ -10,5 +10,6 @@ const authController = new AuthController({ authService })
 router.post('/register', authController.create)
 router.post('/login', authController.login)
 router.get('/users', authController.listUsers)
+router.get('/verify/:userId', authController.verifyEmail)
 
 export default router
