@@ -50,11 +50,3 @@ export const sendVerificationEmail = async (
     return { success: false, error }
   }
 }
-
-// sendVerificationEmail('luifer991@protonmail.com', 'Jorge', 'https://example.com/verify')
-//   .then(result => {
-//     logger.info('Correo enviado:', result)
-//   })
-//   .catch(error => {
-//     logger.error('Error al enviar correo:', error)
-//   })
