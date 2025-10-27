@@ -1,18 +1,13 @@
-import { db, users, accounts, accountUsers, userRoles } from './schema'
+import { db, users, userRoles } from './schema'
 import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema'
-import { InferInsertModel, InferSelectModel, eq } from 'drizzle-orm'
-import { compare, hash } from 'bcrypt'
-import { SALT_ROUNDS } from '../lib/config'
+import { eq } from 'drizzle-orm'
+import { compare } from 'bcrypt'
 import { LoginInput } from '../schema/login-schema'
 import { logger } from '../lib/logger'
-
-// Tipos de Drizzle
-type InsertUser = InferInsertModel<typeof users>
-type SelectUser = InferSelectModel<typeof users>
-type SelectUserRole = InferSelectModel<typeof userRoles>
-type InsertAccount = InferInsertModel<typeof accounts>
-type InsertAccountUser = InferInsertModel<typeof accountUsers>
-type InsertUserRole = InferInsertModel<typeof userRoles>
+import { ClientUserRegister } from '../template-method/concrete-classes/ClientUserRegister'
+import { AdminUserRegister } from '../template-method/concrete-classes/AdminUserRegister'
+import { ServiceProviderUserRegister } from '../template-method/concrete-classes/ServiceProviderUserRegister'
+import { Role } from '../template-method/register.template'
 
 export class UserRepository {
   private readonly db = db
@@ -24,63 +19,28 @@ export class UserRepository {
      * @param accountData Datos validados para la cuenta inicial.
      * @returns Un objeto que contiene el ID del nuevo usuario y el ID de la cuenta.
      */
-  public static async registerUser(
+  public static async registerClient(
     userData: UserRegisterInput,
     accountData: AccountCreateInput
-  ): Promise<{ userId: string, accountId: number, role: string }> {
-    // 1. Hashear la contraseña
-    const id = crypto.randomUUID()
-    const passwordHash = await hash(userData.passwordHash, SALT_ROUNDS)
+  ): Promise<{ userId: string, accountId: number, role: Role }> {
+    const clientRegister = new ClientUserRegister(db)
+    return await clientRegister.registerUser(userData, accountData)
+  }
 
-    // 2. Preparar el objeto para la inserción en la tabla 'users'
-    const userToInsert: InsertUser = {
-      id,
-      email: userData.email,
-      passwordHash,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      phone: userData.phone ?? null,
-      isVerified: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
+  public static async registerServiceProvider(
+    userData: UserRegisterInput,
+    accountData: AccountCreateInput
+  ): Promise<{ userId: string, accountId: number, role: Role }> {
+    const serviceProviderUserRegister = new ServiceProviderUserRegister(db)
+    return await serviceProviderUserRegister.registerUser(userData, accountData)
+  }
 
-    // 3. Iniciar Transacción Atómica
-    return await db.transaction(async (tx) => {
-      // I. CREAR EL USUARIO
-      const [newUser] = await tx.insert(users).values(userToInsert).returning({ id: users.id })
-      if (newUser == null) throw new Error('Fallo al crear el usuario.')
-
-      // II. CREAR LA CUENTA
-      const accountToInsert: InsertAccount = {
-        accountName: accountData.accountName,
-        type: accountData.type
-      }
-      const [newAccount] = await tx.insert(accounts).values(accountToInsert).returning({ id: accounts.id })
-      if (newAccount == null) throw new Error('Fallo al crear la cuenta.')
-
-      // III. ASIGNAR ROL DE PROPIETARIO (accountUsers)
-      const accountUserToInsert: InsertAccountUser = {
-        userId: newUser.id,
-        accountId: newAccount.id,
-        permissionLevel: 'OWNER' // Rol inicial de la cuenta
-      }
-      await tx.insert(accountUsers).values(accountUserToInsert)
-
-      // IV. ASIGNAR ROL GLOBAL (userRoles)
-      const userRoleToInsert: InsertUserRole = {
-        userId: newUser.id,
-        role: 'CLIENT' // Rol de nivel de sistema por defecto
-      }
-      await tx.insert(userRoles).values(userRoleToInsert)
-
-      // Retornar IDs si todas las operaciones fueron exitosas
-      return {
-        userId: newUser.id,
-        accountId: newAccount.id,
-        role: userRoleToInsert.role
-      }
-    })
+  public static async registerAdmin(
+    userData: UserRegisterInput,
+    accountData: AccountCreateInput
+  ): Promise<{ userId: string, accountId: number, role: Role }> {
+    const adminUserRegister = new AdminUserRegister(db)
+    return await adminUserRegister.registerUser(userData, accountData)
   }
 
   public static async loginUser({ email, passwordHash }: LoginInput) {
