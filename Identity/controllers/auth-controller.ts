@@ -9,8 +9,8 @@ export class AuthController {
     this.authService = authService
   }
 
-  create = async (req: Request, res: Response): Promise<Response> => {
-    const result = await this.authService.register(req.body)
+  createClient = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.authService.registerClient(req.body)
     return res.status(result.status).json(result)
   }
 
@@ -32,17 +32,17 @@ export class AuthController {
 
   verifyEmail = async (req: Request, res: Response) => {
     const { userId } = req.params
-    
+
     if (!userId) {
-      return res.status(400).render('verifySuccess', { 
-        success: false, 
-        message: 'userId es requerido' 
+      return res.status(400).render('verifySuccess', {
+        success: false,
+        message: 'userId es requerido'
       })
     }
-    
+
     const result = await this.authService.verifyEmail(userId)
     const success = result.status === 200
-    
+
     return res.status(result.status).render('verifySuccess', {
       success,
       message: result.message
