@@ -7,7 +7,7 @@ const router = Router()
 const authService = new AuthService({ authRepository: UserRepository })
 const authController = new AuthController({ authService })
 
-router.post('/register', authController.create)
+router.post('/register', authController.createClient)
 router.post('/login', authController.login)
 router.get('/users', authController.listUsers)
 router.get('/verify/:userId', authController.verifyEmail)
