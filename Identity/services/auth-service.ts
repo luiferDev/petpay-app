@@ -5,6 +5,7 @@ import { logger } from '../lib/logger'
 import { z } from 'zod'
 import { sendVerificationEmail } from '../utils/nodemailer'
 import jwt from 'jsonwebtoken'
+import { Request } from 'express'
 
 export class AuthService {
   private readonly authRepository: typeof UserRepository
@@ -13,13 +14,13 @@ export class AuthService {
     this.authRepository = authRepository
   }
 
-  async register(requestBody: unknown): Promise<{ status: number, message: string, data?: { userId: string, accountId: number }, errors?: z.ZodError }> {
+  async registerClient(requestBody: Request): Promise<{ status: number, message: string, data?: { userId: string, accountId: number }, errors?: z.ZodError }> {
     try {
       const validatedData: FullRegistrationRequestInput = fullRegistrationRequestSchema.parse(requestBody)
       const userData = validatedData
       const accountData = validatedData.account
 
-      const { userId, accountId } = await this.authRepository.registerUser(
+      const { userId, accountId } = await this.authRepository.registerClient(
         userData,
         accountData
       )
@@ -43,6 +44,7 @@ export class AuthService {
       return { status: 500, message: 'Error en la persistencia de datos.' }
     }
   }
+
   async login(requestBody: unknown): Promise<{ status: number, message: string, data?: any, token?: string, errors?: z.ZodError }> {
     try {
       logger.info('Validando datos de login')
@@ -50,10 +52,10 @@ export class AuthService {
       logger.info('Datos validados', { email: validatedData.email })
 
       logger.info('Buscando usuario')
-      const {user, role} = await this.authRepository.loginUser(validatedData)
+      const { user, role } = await this.authRepository.loginUser(validatedData)
       logger.info('Usuario encontrado', { id: user.id, email: user.email })
-      
-      
+
+
       const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'Secret_Awwesome_key'
       const token = jwt.sign(
         { id: user.id, email: user.email, role: role },
