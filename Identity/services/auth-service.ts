@@ -5,7 +5,9 @@ import { logger } from '../lib/logger'
 import { z } from 'zod'
 import { sendVerificationEmail } from '../utils/nodemailer'
 import jwt from 'jsonwebtoken'
-import { Request } from 'express'
+import { Role } from '../template-method/register.template'
+
+type UserType = Role
 
 export class AuthService {
   private readonly authRepository: typeof UserRepository
@@ -14,38 +16,76 @@ export class AuthService {
     this.authRepository = authRepository
   }
 
-  async registerClient(requestBody: Request): Promise<{ status: number, message: string, data?: { userId: string, accountId: number }, errors?: z.ZodError }> {
-    try {
-      const validatedData: FullRegistrationRequestInput = fullRegistrationRequestSchema.parse(requestBody)
-      const userData = validatedData
-      const accountData = validatedData.account
-
-      const { userId, accountId } = await this.authRepository.registerClient(
-        userData,
-        accountData
-      )
-
-      const verificationLink = `http://localhost:3000/auth/verify/${userId}`
-      sendVerificationEmail(userData.email, userData.firstName, verificationLink)
-        .then(() => logger.info('Correo de verificación enviado', { userId }))
-        .catch((error: unknown) => logger.error('Error al enviar el correo de verificación', { userId, error }))
-
-      return {
-        status: 201,
-        message: 'Registro completado.',
-        data: { userId, accountId }
+  private async registerUser(
+      requestBody: unknown,
+      userType: UserType
+    ): Promise<{
+      status: number, message: string, data?:
+        { userId: string, accountId: number },
+      errors?: z.ZodError
+    }> {
+      try {
+        const validatedData: FullRegistrationRequestInput = fullRegistrationRequestSchema.parse(requestBody)
+        const userData = validatedData
+        const accountData = validatedData.account
+  
+        // Seleccionar método según tipo de usuario
+        let result
+        switch (userType) {
+          case Role.CLIENT:
+            result = await this.authRepository.registerClient(userData, accountData)
+            break
+          case Role.SERVICE_PROVIDER:
+            result = await this.authRepository.registerServiceProvider(userData, accountData)
+            break
+          case Role.ADMIN:
+            result = await this.authRepository.registerAdmin(userData, accountData)
+            break
+          default:
+            throw new Error(`Tipo de usuario no válido: ${userType}`)
+        }
+  
+        const { userId, accountId } = result
+  
+        const verificationLink = `http://localhost:3000/auth/verify/${userId}`
+        sendVerificationEmail(userData.email, userData.firstName, verificationLink)
+          .then(() => logger.info('Correo de verificación enviado', { userId, userType }))
+          .catch((error: unknown) => logger.error('Error al enviar el correo de verificación', { userId, error }))
+  
+        return {
+          status: 201,
+          message: `Registro de ${userType.toLowerCase()} completado.`,
+          data: { userId, accountId }
+        }
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return { status: 400, message: 'Datos de entrada inválidos.', errors: error }
+        }
+  
+        logger.error(`Error en registro de ${userType}`, { error: error instanceof Error ? error.message : error })
+        return { status: 500, message: 'Error en la persistencia de datos.' }
       }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return { status: 400, message: 'Datos de entrada inválidos.', errors: error }
-      }
-
-      logger.error('Error en el registro', { error: error instanceof Error ? error.message : error })
-      return { status: 500, message: 'Error en la persistencia de datos.' }
     }
+
+  async registerClient(request: Request) {
+    return this.registerUser(request, Role.CLIENT)
   }
 
-  async login(requestBody: unknown): Promise<{ status: number, message: string, data?: any, token?: string, errors?: z.ZodError }> {
+  async registerServiceProvider(request: Request, role: Role.SERVICE_PROVIDER) {
+    return this.registerUser(request, role)
+  }
+
+  async registerAdmin(request: Request, role: Role.ADMIN) {
+    return this.registerUser(request, role)
+  }
+
+  async login(requestBody: Request):
+    Promise<{
+      status: number, message: string, data?:
+      { userId: string, email: string, role?: any },
+      token?: string,
+      errors?: z.ZodError
+    }> {
     try {
       logger.info('Validando datos de login')
       const validatedData: LoginInput = loginSchema.parse(requestBody)
@@ -55,17 +95,28 @@ export class AuthService {
       const { user, role } = await this.authRepository.loginUser(validatedData)
       logger.info('Usuario encontrado', { id: user.id, email: user.email })
 
+      if (!role) {
+        logger.warn('Usuario sin rol asignado', { userId: user.id })
+        return { status: 403, message: 'Usuario no tiene rol asignado.' }
+      }
+
+      logger.info('Generando token JWT')
 
       const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'Secret_Awwesome_key'
       const token = jwt.sign(
         { id: user.id, email: user.email, role: role },
         JWT_SECRET,
-        { expiresIn: '1h' })
+        {
+          expiresIn: '1h', algorithm: 'HS256',
+          issuer: 'auth-service',
+          audience: 'user-service',
+          subject: user.id,
+        })
 
       return {
         status: 200,
         message: 'Login exitoso.',
-        data: { userId: user.id, email: user.email, role: role },
+        data: { userId: user.id, email: user.email, role: role?.role },
         token
       }
     } catch (error) {
