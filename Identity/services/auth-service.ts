@@ -1,23 +1,23 @@
 import { FullRegistrationRequestInput, fullRegistrationRequestSchema } from '../schema/register-schema'
 import { LoginInput, loginSchema } from '../schema/login-schema'
-import { UserRepository } from '../model/user-repository'
 import { logger } from '../lib/logger'
 import { z } from 'zod'
-import { sendVerificationEmail } from '../utils/nodemailer'
 import jwt from 'jsonwebtoken'
 import { Role } from '../template-method/register.template'
+import { IUserRepository } from '../interfaces/IUserRepository'
+import { IAuthService } from '../interfaces/IAuthService'
+import { IEmailService } from '../interfaces/IEmailService'
 
 type UserType = Role
 
-export class AuthService {
-  private readonly authRepository: typeof UserRepository
-
-  constructor({ authRepository }: { authRepository: typeof UserRepository }) {
-    this.authRepository = authRepository
-  }
+export class AuthService implements IAuthService {
+  constructor(
+    private readonly authRepository: IUserRepository,
+    private readonly emailService: IEmailService
+  ) {}
 
   private async registerUser(
-      requestBody: unknown,
+      requestBody: Request,
       userType: UserType
     ): Promise<{
       status: number, message: string, data?:
@@ -48,7 +48,7 @@ export class AuthService {
         const { userId, accountId } = result
   
         const verificationLink = `http://localhost:3000/auth/verify/${userId}`
-        sendVerificationEmail(userData.email, userData.firstName, verificationLink)
+        this.emailService.sendVerificationEmail(userData.email, userData.firstName, verificationLink)
           .then(() => logger.info('Correo de verificación enviado', { userId, userType }))
           .catch((error: unknown) => logger.error('Error al enviar el correo de verificación', { userId, error }))
   

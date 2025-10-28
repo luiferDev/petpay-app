@@ -5,6 +5,8 @@ import { PORT } from '../lib/config'
 import { logger } from '../lib/logger'
 import path from 'path'
 import 'dotenv/config'
+// Ensure DI bootstrap runs before routes that resolve services from the container
+import '../container/bootstrap'
 import router from '../routes/auth.routes'
 
 // 1. Inicializar la aplicación Express

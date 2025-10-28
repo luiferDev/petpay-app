@@ -1,14 +1,10 @@
 import { Request, Response } from 'express'
-import { AuthService } from '../services/auth-service'
 import { logger } from '../lib/logger'
 import { Role } from '../template-method/register.template'
+import { IAuthService } from '../interfaces/IAuthService'
 
 export class AuthController {
-  private readonly authService: AuthService
-
-  constructor({ authService }: { authService: AuthService }) {
-    this.authService = authService
-  }
+  constructor(private readonly authService: IAuthService) {}
 
   createClient = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.authService.registerClient(req.body)
