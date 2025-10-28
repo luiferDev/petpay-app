@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { AuthService } from '../services/auth-service'
 import { logger } from '../lib/logger'
+import { Role } from '../template-method/register.template'
 
 export class AuthController {
   private readonly authService: AuthService
@@ -11,6 +12,37 @@ export class AuthController {
 
   createClient = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.authService.registerClient(req.body)
+    return res.status(result.status).json(result)
+  }
+
+  registerByRole = async (req: Request, res: Response): Promise<Response> => {
+    const { role } = req.params
+    
+    if (!role) {
+      return res.status(400).json({ status: 400, message: 'Rol es requerido' })
+    }
+
+    const normalizedRole = role.toUpperCase()
+    const validRoles = Object.values(Role)
+    
+    if (!validRoles.includes(normalizedRole as Role)) {
+      return res.status(400).json({ 
+        status: 400, 
+        message: `Rol no válido. Roles permitidos: ${validRoles.join(', ')}` 
+      })
+    }
+
+    logger.info('Registrando usuario', { role: normalizedRole })
+    
+    let result
+    if (normalizedRole === Role.SERVICE_PROVIDER) {
+      result = await this.authService.registerServiceProvider(req.body, normalizedRole)
+    } else if (normalizedRole === Role.ADMIN) {
+      result = await this.authService.registerAdmin(req.body, normalizedRole)
+    } else {
+      return res.status(400).json({ status: 400, message: 'Rol no soportado' })
+    }
+    
     return res.status(result.status).json(result)
   }
 
