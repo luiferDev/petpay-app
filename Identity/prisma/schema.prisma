@@ -56,7 +56,7 @@ model user_roles {
 
 model users {
   id            String          @id @db.VarChar(36)
-  email         String          @unique(map: "email_idx") @db.VarChar(255)
+  email         String          @unique(map: "users_email_unique") @db.VarChar(255)
   password_hash String          @db.VarChar(255)
   first_name    String          @db.VarChar(100)
   last_name     String          @db.VarChar(100)
@@ -67,6 +67,8 @@ model users {
   account_users account_users[]
   addresses     addresses[]
   user_roles    user_roles[]
+
+  @@index([email], map: "email_idx")
 }
 
 enum account_type {
