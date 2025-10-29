@@ -1,5 +1,5 @@
 import { ExtractTablesWithRelations, InferInsertModel, InferSelectModel } from "drizzle-orm"
-import { db, accounts, accountUsers, userRoles, users } from "../model/schema"
+import { Db, accounts, accountUsers, userRoles, users } from "../model/schema"
 import { AccountCreateInput, UserRegisterInput } from "../schema/register-schema"
 import { SALT_ROUNDS } from '../lib/config'
 import { hash } from "bcrypt"
@@ -24,9 +24,9 @@ export enum Role { // Renombramos para usar mayúscula y ser consistentes con la
 }
 
 export abstract class UserRegisterTemplate {
-  protected db: typeof db
+  protected db: typeof Db
 
-  constructor(database: typeof db) {
+  constructor(database: typeof Db) {
     this.db = database
   }
 
@@ -36,13 +36,13 @@ export abstract class UserRegisterTemplate {
     accountData: AccountCreateInput
   ): Promise<{ userId: string, accountId: number, role: Role }> {
     const userToInsert = await this.prepareUserData(userData)
-    
+
     return await this.db.transaction(async (tx) => {
       const newUser = await this.createUser(tx, userToInsert)
       const newAccount = await this.createAccount(tx, accountData)
       await this.assignAccountRole(tx, newUser.id, newAccount.id)
       const role: Role = await this.assignGlobalRole(tx, newUser.id)
-      
+
       return {
         userId: newUser.id,
         accountId: newAccount.id,
@@ -53,12 +53,12 @@ export abstract class UserRegisterTemplate {
 
   // Métodos abstractos que deben implementar las subclases
   protected abstract assignGlobalRole(tx: TX, userId: string): Promise<Role>
-  
+
   // Métodos concretos con implementación por defecto
   protected async prepareUserData(userData: UserRegisterInput): Promise<InsertUser> {
     const id = crypto.randomUUID()
     const passwordHash = await hash(userData.passwordHash, SALT_ROUNDS)
-    
+
     return {
       id,
       email: userData.email,
