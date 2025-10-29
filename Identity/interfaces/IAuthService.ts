@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { Role } from '../template-method/register.template'
+import { User } from './IUserRepository'
 
 export interface IAuthResponse {
   status: number
@@ -10,10 +11,10 @@ export interface IAuthResponse {
 }
 
 export interface IAuthService {
-  registerClient(requestBody: unknown): Promise<IAuthResponse>
-  registerServiceProvider(requestBody: unknown, role: Role.SERVICE_PROVIDER): Promise<IAuthResponse>
-  registerAdmin(requestBody: unknown, role: Role.ADMIN): Promise<IAuthResponse>
-  login(requestBody: unknown): Promise<IAuthResponse>
-  listUsers(): Promise<{ users: any[] }>
+  registerClient(requestBody: Request): Promise<IAuthResponse>
+  registerServiceProvider(requestBody: Request, role: Role.SERVICE_PROVIDER): Promise<IAuthResponse>
+  registerAdmin(requestBody: Request, role: Role.ADMIN): Promise<IAuthResponse>
+  login(requestBody: Request): Promise<IAuthResponse>
+  listUsers(): Promise<{ users: User[] }>
   verifyEmail(userId: string): Promise<IAuthResponse>
 }
