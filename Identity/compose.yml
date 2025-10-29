@@ -24,7 +24,7 @@ services:
         - action: rebuild
           path: package.json
         - action: rebuild
-          path: bun.lockb 
+          path: bun.lockb
     command: bun run dev
 
   auth-db:

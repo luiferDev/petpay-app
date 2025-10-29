@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    body {
+      font-family: Arial, sans - serif;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #007bff;
+      color: #ffffff;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Bienvenido, {{ firstName }}!</h1>
+    <p> Gracias por registrarte en nuestro servicio.Por favor, haz clic en el botón de abajo para verificar tu
+      dirección de correo electrónico.</p>
+
+    <p>
+      <a href="{{verificationLink}}" class="button"> Verificar Cuenta </a>
+    </p>
+
+    <p> Si no puedes hacer clic en el botón, copia y pega el siguiente enlace en tu navegador: </p>
+    <p> <small>{{ verificationLink }}</small></p>
+
+    <p>Si no solicitaste esta verificación, ignora este correo.</p>
+    <p> Saludos, <br>El equipo de[Tu Servicio]</p>
+  </div>
+</body>
+
+</html>

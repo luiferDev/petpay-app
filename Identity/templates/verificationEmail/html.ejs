@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Verificación de Correo</title>
+</head>
+<body>
+    <h2>Hola <%= firstName %></h2>
+    <p>Gracias por registrarte. Haz clic en el enlace para verificar tu cuenta:</p>
+    <a href="<%= verificationLink %>" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+        Verificar cuenta
+    </a>
+    <p>Si no puedes hacer clic en el enlace, copia y pega esta URL en tu navegador:</p>
+    <p><%= verificationLink %></p>
+</body>
+</html>

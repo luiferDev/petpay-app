@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Email Verificado</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <% if (success) { %>
+        <h1 class="success">✅ Email Verificado</h1>
+        <p>Tu cuenta ha sido verificada exitosamente.</p>
+        <p>Ya puedes iniciar sesión en tu cuenta.</p>
+    <% } else { %>
+        <h1 class="error">❌ Error de Verificación</h1>
+        <p><%= message %></p>
+    <% } %>
+</body>
+</html>
