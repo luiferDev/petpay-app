@@ -1,10 +1,13 @@
 import { Request, Response } from 'express'
 import { logger } from '../lib/logger'
 import { Role } from '../template-method/register.template'
-import { IAuthService } from '../interfaces/IAuthService'
+import { AuthService } from '../services/auth-service'
 
 export class AuthController {
-  constructor(private readonly authService: IAuthService) {}
+  authService: AuthService
+  constructor(authService: AuthService) {
+    this.authService = authService
+  }
 
   createClient = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.authService.registerClient(req.body)
@@ -13,23 +16,23 @@ export class AuthController {
 
   registerByRole = async (req: Request, res: Response): Promise<Response> => {
     const { role } = req.params
-    
+
     if (!role) {
       return res.status(400).json({ status: 400, message: 'Rol es requerido' })
     }
 
     const normalizedRole = role.toUpperCase()
     const validRoles = Object.values(Role)
-    
+
     if (!validRoles.includes(normalizedRole as Role)) {
-      return res.status(400).json({ 
-        status: 400, 
-        message: `Rol no válido. Roles permitidos: ${validRoles.join(', ')}` 
+      return res.status(400).json({
+        status: 400,
+        message: `Rol no válido. Roles permitidos: ${validRoles.join(', ')}`
       })
     }
 
     logger.info('Registrando usuario', { role: normalizedRole })
-    
+
     let result
     if (normalizedRole === Role.SERVICE_PROVIDER) {
       result = await this.authService.registerServiceProvider(req.body, normalizedRole)
@@ -38,7 +41,7 @@ export class AuthController {
     } else {
       return res.status(400).json({ status: 400, message: 'Rol no soportado' })
     }
-    
+
     return res.status(result.status).json(result)
   }
 
@@ -50,7 +53,7 @@ export class AuthController {
       res.cookie('access_token', result.token, { httpOnly: true })
     }
 
-    return res.status(result.status).json(result)
+    return res.status(result.status).json({data: result.data, message: result.message})
   }
 
   listUsers = async (req: Request, res: Response): Promise<Response> => {
