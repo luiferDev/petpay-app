@@ -9,17 +9,12 @@ import { AdminUserRegister } from '../template-method/concrete-classes/AdminUser
 import { ServiceProviderUserRegister } from '../template-method/concrete-classes/ServiceProviderUserRegister'
 import { Role } from '../template-method/register.template'
 import { IUser, IUserRepository, User, UserRole } from '../interfaces/IUserRepository'
-import { role } from '../generated/prisma/enums'
+import { autoInjectable, inject } from 'tsyringe'
+import { TOKENS } from '../lib/tokens'
 
-
+@autoInjectable()
 export class DrizzleUserRepository implements IUserRepository {
-  drizzle = Db
-
-  constructor (database?: typeof Db) {
-    if (database != null) {
-      this.drizzle = database
-    }
-  }
+  constructor(@inject(TOKENS.Database) private drizzle: typeof Db) { }
 
   /**
      * Registra un nuevo usuario, crea su cuenta asociada y establece los roles iniciales,
@@ -88,11 +83,11 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   public async getAllUsers(): Promise<{ users: User[] }> {
-    const usersData = await this.drizzle.select({ 
-      id: users.id, 
-      email: users.email, 
-      firstName: users.firstName, 
-      lastName: users.lastName, 
+    const usersData = await this.drizzle.select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
       isVerified: users.isVerified,
       role: userRoles.role
     }).from(users).rightJoin(userRoles, eq(users.id, userRoles.userId))
@@ -110,7 +105,7 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   public async verifyUser(userId: string): Promise<{ id: string, email: string, isVerified: boolean }> {
-    const [updatedUser] = await Db.update(users)
+    const [updatedUser] = await this.drizzle.update(users)
       .set({ isVerified: true, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning({ id: users.id, email: users.email, isVerified: users.isVerified })
