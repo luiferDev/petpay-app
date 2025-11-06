@@ -1,9 +1,8 @@
 package main
 
-import (
-	"petpay/marketplace-service/db"
-	//"petpay/marketplace-service/model"
-)
+import "petpay/marketplace-service/internal/infrastructure/db"
+
+
 
 func main() {
 	db.DBConnection()
