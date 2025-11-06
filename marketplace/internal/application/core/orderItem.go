@@ -1,9 +1,6 @@
-package model
-
-import "gorm.io/gorm"
+package core
 
 type OrderItem struct {
-	gorm.Model
 	OrderId       string `gorm:"column:order_id; index" json:"orderId"`
 	ProductId     string `gorm:"column:product_id; index" json:"productId"`
 	Quantity      int    `gorm:"column:quantity" json:"quantity"`
