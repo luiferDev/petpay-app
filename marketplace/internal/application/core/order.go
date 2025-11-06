@@ -1,10 +1,10 @@
-package model
+package core
 
 import "gorm.io/gorm"
 
 type Order struct {
 	gorm.Model
-	OrderNumber string `gorm:"column:order_number" json:"orderNumber"`
+	OrderNumber uint64 `gorm:"column:order_number" json:"orderNumber"`
 	CustomerId string `gorm:"column:customer_id; index" json:"customerId"`
 	StoreProfileId string `gorm:"column:store_profile_id; index" json:"storeProfileId"`
 	Status OrderStatus `gorm:"type:varchar(255); default:'PENDING'; column:status" json:"status"`
@@ -16,7 +16,7 @@ type Order struct {
 	Currency float64 `gorm:"column:currency" json:"currency"`
 	ShippingAddressId string `gorm:"column:shipping_address_id; index" json:"shippingAddressId"`
 	BillingAddressId string `gorm:"column:billing_address_id; index" json:"billingAddressId"`
-	TrackingNumber string `gorm:"column:tracking_number" json:"trackingNumber"`
+	TrackingNumber uint64 `gorm:"column:tracking_number" json:"trackingNumber"`
 	ShippingCarrier string `gorm:"column:shipping_carrier" json:"shippingCarrier"`
 	CustomerNotes string `gorm:"column:customer_notes" json:"customerNotes"`
 	InternalNotes string `gorm:"column:internal_notes" json:"internalNotes"`
