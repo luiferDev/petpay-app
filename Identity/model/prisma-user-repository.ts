@@ -1,4 +1,4 @@
-import { IUserRepository, IUser, IUserRole } from '../interfaces/IUserRepository'
+import { IUserRepository, IUser, UserRole, User } from '../interfaces/IUserRepository'
 import { hash } from 'bcrypt'
 import { SALT_ROUNDS } from '../lib/config'
 import { generateULID } from '../lib/ulid'
@@ -159,23 +159,47 @@ export class PrismaUserRepository implements IUserRepository {
     return result
   }
 
-  public async loginUser({ email, passwordHash }: LoginInput): Promise<{ user: IUser; role: IUserRole | null }> {
+  public async loginUser({ email, passwordHash }: LoginInput): Promise<{ user: IUser; role: UserRole }> {
     const user = await this.prisma.users.findUnique({ where: { email } })
     if (!user) throw new Error('Usuario no existe')
 
     const roles = await this.prisma.user_roles.findMany({ where: { user_id: user.id } })
-    const role = roles.length > 0 ? { userId: user.id, role: roles[0].role as Role } : null
+    if (roles.length === 0) throw new Error('Usuario sin rol asignado')
+    
+    const role = roles[0].role as string
+    if (!(role in UserRole)) throw new Error('Rol inválido')
 
     const { compare } = await import('bcrypt')
     const isValidPassword = await compare(passwordHash, user.password_hash)
     if (!isValidPassword) throw new Error('Contraseña incorrecta')
 
-    return { user: this.mapUserModel(user), role }
+    return { user: this.mapUserModel(user), role: UserRole[role as keyof typeof UserRole] }
   }
 
-  public async getAllUsers(): Promise<Pick<IUser, 'id' | 'email'>[]> {
-    const users = await this.prisma.users.findMany({ select: { id: true, email: true } })
-    return users.map((u: any) => ({ id: u.id, email: u.email }))
+  public async getAllUsers(): Promise<{ users: User[] }> {
+    const usersData = await this.prisma.users.findMany({ 
+      select: { 
+        id: true, 
+        email: true, 
+        first_name: true, 
+        last_name: true, 
+        is_verified: true 
+      },
+      include: {
+        user_roles: { select: { role: true } }
+      }
+    })
+    
+    const users: User[] = usersData.map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      isVerified: u.is_verified,
+      role: { UserRole: UserRole[u.user_roles[0]?.role as keyof typeof UserRole] || UserRole.CLIENT }
+    }))
+    
+    return { users }
   }
 
   public async verifyUser(userId: string): Promise<IUser> {

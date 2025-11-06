@@ -2,7 +2,9 @@ import { Request, Response } from 'express'
 import { logger } from '../lib/logger'
 import { Role } from '../template-method/register.template'
 import { AuthService } from '../services/auth-service'
+import { autoInjectable } from 'tsyringe'
 
+@autoInjectable()
 export class AuthController {
   authService: AuthService
   constructor(authService: AuthService) {
@@ -50,7 +52,12 @@ export class AuthController {
     const result = await this.authService.login(req.body)
     logger.info('Login result', { status: result.status, message: result.message })
     if (result.token) {
-      res.cookie('access_token', result.token, { httpOnly: true })
+      res.cookie('access_token', result.token, {
+        httpOnly: true, // ESENCIAL: Evita que JavaScript acceda a ella (seguridad XSS)
+        secure: process.env.NODE_ENV === 'production', // Solo en HTTPS en producción
+        sameSite: 'lax', // Protección CSRF básica
+        maxAge: 3600000
+})
     }
 
     return res.status(result.status).json({data: result.data, message: result.message})

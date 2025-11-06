@@ -1,25 +1,32 @@
 import { Router, Request, Response } from 'express'
 import { AuthController } from '../controllers/auth-controller'
-import { AuthService } from '../services/auth-service'
-import { EmailService } from '../services/EmailService'
+import { container } from 'tsyringe'
+import { TOKENS } from '../lib/tokens'
 import { Db } from '../model/schema'
 import { createNodemailerTransport } from '../utils/nodemailer'
-import { DrizzleUserRepository } from '../model/drizzle.user.repository'
+import { protect, restrictTo } from '../middlewares/protected.routes'
+import { UserRole } from '../interfaces/IUserRepository'
+
+// Register database in DI container
+container.registerInstance(TOKENS.Database, Db)
+container.registerInstance(TOKENS.Transport, createNodemailerTransport())
 
 
 const router = Router()
 
-// Crear dependencias manualmente
-const userRepository = new DrizzleUserRepository(Db)
-const emailTransport = createNodemailerTransport()
-const emailService = new EmailService(emailTransport)
-const authService = new AuthService(userRepository, emailService)
-const authController = new AuthController(authService)
+// Función de utilidad para obtener el controlador.
+// Esto asegura que la llamada a container.resolve() solo ocurra
+// después de que el archivo index.ts haya terminado de ejecutarse
+// y registrado todas las dependencias (como TOKENS.Database).
+const getAuthController = () => container.resolve(AuthController)
 
-router.post('/register', (req: Request, res: Response) => authController.createClient(req, res))
-router.post('/login', (req: Request, res: Response) => authController.login(req, res))
-router.get('/users', (req: Request, res: Response) => authController.listUsers(req, res))
-router.get('/verify/:userId', (req: Request, res: Response) => authController.verifyEmail(req, res))
-router.post('/register/:role', (req: Request, res: Response) => authController.registerByRole(req, res))
+// Ahora, todas las rutas usan la función getAuthController()
+// para obtener una instancia *justo a tiempo*.
+router.post('/register', (req: Request, res: Response) => getAuthController().createClient(req, res))
+router.post('/login', (req: Request, res: Response) => getAuthController().login(req, res))
+router.get('/verify/:userId', (req: Request, res: Response) => getAuthController().verifyEmail(req, res))
+router.post('/register/:role', (req: Request, res: Response) => getAuthController().registerByRole(req, res))
+
+router.get('/users', protect, restrictTo([UserRole.ADMIN]), (req: Request, res: Response) => getAuthController().listUsers(req, res))
 
 export default router

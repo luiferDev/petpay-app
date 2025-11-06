@@ -1,3 +1,4 @@
+import 'reflect-metadata'
 import express, { type Request, type Response } from 'express'
 import { corsMiddleware } from '../middlewares/cors'
 import cookieParser from 'cookie-parser'
@@ -6,6 +7,7 @@ import { logger } from '../lib/logger'
 import path from 'path'
 import 'dotenv/config'
 import router from '../routes/auth.routes'
+
 
 // 1. Inicializar la aplicación Express
 const app = express()

@@ -8,9 +8,12 @@ import { User, UserRole } from '../interfaces/IUserRepository'
 import { IAuthService } from '../interfaces/IAuthService'
 import { DrizzleUserRepository } from '../model/drizzle.user.repository'
 import { EmailService } from './EmailService'
+import { autoInjectable } from 'tsyringe'
 
 type UserType = Role
+const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'secret'
 
+@autoInjectable()
 export class AuthService implements IAuthService {
   authRepository: DrizzleUserRepository
   emailService: EmailService
@@ -106,7 +109,6 @@ export class AuthService implements IAuthService {
 
       logger.info('Generando token JWT')
 
-      const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'Secret_Awwesome_key'
       const token = jwt.sign(
         { id: user.id, email: user.email, role: role },
         JWT_SECRET,
@@ -116,6 +118,8 @@ export class AuthService implements IAuthService {
           audience: 'user-service',
           subject: user.id,
         })
+
+      logger.info('Token JWT generado', { userId: user.id })
 
       const userData: User = {
         id: user.id,
