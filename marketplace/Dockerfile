@@ -1,14 +1,15 @@
-FROM golang:1.25.3-alpine AS builder
+FROM golang:1.25.3-alpine
 
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o marketplace ./cmd/main.go
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/marketplace .
-EXPOSE 8080
-CMD ["./marketplace"]
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -o marketplace .
+
+EXPOSE 8083
+
+CMD ["./marketplaces"]
