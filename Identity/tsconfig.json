@@ -8,8 +8,8 @@
     "jsx": "react-jsx",
     "allowJs": true,
 
-    // Bundler mode
-    "moduleResolution": "bundler",
+    // Module resolution for Node packages (resolves subpath imports like "drizzle-orm/node-postgres")
+    "moduleResolution": "node",
     "noEmit": true,
 
     // Best practices
