@@ -8,7 +8,7 @@ type Product struct {
 	gorm.Model
 	StoreProfileId uint64   `json:"store_profile_id" gorm:"not null"`
 	CategoryId     uint64   `json:"category_id" gorm:"not null;index"`
-	Name    string   `json:"product_name" gorm:"size:255;not null"`
+	Name           string   `json:"product_name" gorm:"size:255;not null"`
 	Description    string   `json:"description" gorm:"type:text"`
 	Brand          string   `json:"brand" gorm:"size:100 type: varchar(50)"`
 	Price          float64  `json:"price" gorm:"type:decimal(15,2);not null"`
