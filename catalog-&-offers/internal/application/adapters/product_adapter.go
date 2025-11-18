@@ -3,14 +3,14 @@ package adapters
 import (
 	"petpay/catalog-offers-service/internal/application/core"
 	"petpay/catalog-offers-service/internal/application/ports/In"
-	"petpay/catalog-offers-service/internal/infrastructure/repository"
+	"petpay/catalog-offers-service/internal/application/ports/out"
 )
 
 type ProductAdapter struct {
-	repo repository.ProductRepository
+	repo out.ProductRepositoryPort
 }
 
-func NewProductAdapter(repo repository.ProductRepository) in.ProductServicePort {
+func NewProductAdapter(repo out.ProductRepositoryPort) in.ProductServicePort {
 	return &ProductAdapter{repo: repo}
 }
 
