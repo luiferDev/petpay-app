@@ -10,5 +10,5 @@ export interface IEventPublisher {
    * @param {any} event - El objeto de evento de dominio.
    * @returns {Promise<void>}
    */
-  publish(routingKey: string, event: any): Promise<void>;
+  publish: (routingKey: string, event: any) => Promise<void>
 }

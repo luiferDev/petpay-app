@@ -3,7 +3,7 @@
 /**
  * @interface IEmailService
  * @description Port (interfaz) para servicios de envío de correo electrónico.
- * Permite a los casos de uso (p.ej., RegisterUserUseCase) solicitar el envío 
+ * Permite a los casos de uso (p.ej., RegisterUserUseCase) solicitar el envío
  * de emails sin depender de la implementación (Nodemailer, AWS SES, etc.).
  */
 export interface IEmailService {
@@ -15,10 +15,10 @@ export interface IEmailService {
    * @param {Record<string, any>} [locals] - Variables a inyectar en la plantilla (data).
    * @returns {Promise<{success: boolean, messageId?: string, error?: any}>} Resultado de la operación.
    */
-  send(
-    template: string, 
-    to: string, 
-    subject: string, 
+  send: (
+    template: string,
+    to: string,
+    subject: string,
     locals?: Record<string, any>
-  ): Promise<{ success: boolean; messageId?: string; error?: any }>;
+  ) => Promise<{ success: boolean, messageId?: string, error?: any }>
 }

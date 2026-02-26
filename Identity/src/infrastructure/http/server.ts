@@ -6,8 +6,9 @@ import { PORT } from '../lib/config'
 import { logger } from '../lib/logger'
 import path from 'path'
 import 'dotenv/config'
-import router from '../routes/auth.routes'
-
+import authRouter from '../routes/auth.routes'
+import oauthRouter from '../routes/oauth.routes'
+import { authRateLimiter, oauthRateLimiter, generalRateLimiter } from './middlewares/rate-limiter'
 
 // 1. Inicializar la aplicación Express
 const app = express()
@@ -20,12 +21,15 @@ app.use(cookieParser())
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, '../views'))
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', generalRateLimiter, (req: Request, res: Response) => {
   res.send('¡Hola desde Express y Bun! 🚀')
 })
 
-// Rutas de autenticación
-app.use('/auth', router)
+// Rutas de autenticación con rate limiting
+app.use('/auth', authRateLimiter, authRouter)
+
+// Rutas de OAuth con rate limiting
+app.use('/auth/oauth', oauthRateLimiter, oauthRouter)
 
 // Iniciar el servidor
 app.listen(PORT, () => {

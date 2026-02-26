@@ -8,10 +8,10 @@ import { logger } from '../../../shared/utils/logger'
 declare module 'express' {
   interface Request {
     user?: {
-      id: string;
-      email: string;
-      role: UserRole;
-    };
+      id: string
+      email: string
+      role: UserRole
+    }
   }
 }
 
@@ -47,7 +47,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role,
+      role: decoded.role
     }
 
     logger.debug('Token validado exitosamente', { userId: req.user.id, role: req.user.role })
@@ -65,7 +65,6 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
   }
 }
 
-
 /**
  * Middleware para restringir el acceso solo a ciertos roles.
  * Debe usarse DESPUÉS del middleware 'protect'.
@@ -74,8 +73,8 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
 export const restrictTo = (allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     // Si req.user no existe, el middleware 'protect' falló o no se usó primero.
-    if (!req.user) {
-      return res.status(500).json({ message: 'Error de configuración: Middleware de protección faltante.' });
+    if (req.user == null) {
+      return res.status(500).json({ message: 'Error de configuración: Middleware de protección faltante.' })
     }
 
     const userRole = req.user.role

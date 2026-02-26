@@ -12,7 +12,6 @@ import { createNodemailerTransport } from '../../../../utils/nodemailer'
 container.registerInstance(TOKENS.Database, Db)
 container.registerInstance(TOKENS.Transport, createNodemailerTransport())
 
-
 const router = Router()
 
 // Función de utilidad para obtener el controlador.
@@ -24,9 +23,9 @@ const getAuthController = () => container.resolve(AuthController)
 // Ahora, todas las rutas usan la función getAuthController()
 // para obtener una instancia *justo a tiempo*.
 router.post('/register', (req: Request, res: Response) => getAuthController().createClient(req, res))
-router.post('/login', (req: Request, res: Response) => getAuthController().login(req, res))
-router.get('/verify/:userId', (req: Request, res: Response) => getAuthController().verifyEmail(req, res))
-router.post('/register/:role', (req: Request, res: Response) => getAuthController().registerByRole(req, res))
+router.post('/login', async (req: Request, res: Response) => await getAuthController().login(req, res))
+router.get('/verify/:userId', async (req: Request, res: Response) => await getAuthController().verifyEmail(req, res))
+router.post('/register/:role', async (req: Request, res: Response) => await getAuthController().registerByRole(req, res))
 
 router.get('/users', protect, restrictTo([UserRole.ADMIN]), (req: Request, res: Response) => getAuthController().listUsers(req, res))
 

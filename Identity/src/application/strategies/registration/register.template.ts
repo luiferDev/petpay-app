@@ -1,16 +1,15 @@
-import { ExtractTablesWithRelations, InferInsertModel, InferSelectModel } from "drizzle-orm"
-import { Db, accounts, accountUsers, userRoles, users } from "../model/schema"
-import { AccountCreateInput, UserRegisterInput } from "../schema/register-schema"
+import { ExtractTablesWithRelations, InferInsertModel, InferSelectModel } from 'drizzle-orm'
+import { Db, accounts, accountUsers, userRoles, users } from '../model/schema'
+import { AccountCreateInput, UserRegisterInput } from '../schema/register-schema'
 import { SALT_ROUNDS } from '../lib/config'
-import { hash } from "bcrypt"
-import { NodePgQueryResultHKT } from "drizzle-orm/node-postgres"
-import { PgTransaction } from "drizzle-orm/pg-core"
-
+import { hash } from 'bcrypt'
+import { NodePgQueryResultHKT } from 'drizzle-orm/node-postgres'
+import { PgTransaction } from 'drizzle-orm/pg-core'
 
 // Tipos de Drizzle
 type InsertUser = InferInsertModel<typeof users>
-//type SelectUser = InferSelectModel<typeof users>
-//type SelectUserRole = InferSelectModel<typeof userRoles>
+// type SelectUser = InferSelectModel<typeof users>
+// type SelectUserRole = InferSelectModel<typeof userRoles>
 type InsertAccount = InferInsertModel<typeof accounts>
 type InsertAccountUser = InferInsertModel<typeof accountUsers>
 export type InsertUserRole = InferInsertModel<typeof userRoles>
@@ -26,12 +25,12 @@ export enum Role { // Renombramos para usar mayúscula y ser consistentes con la
 export abstract class UserRegisterTemplate {
   protected db: typeof Db
 
-  constructor(database: typeof Db) {
+  constructor (database: typeof Db) {
     this.db = database
   }
 
   // Template Method - define el algoritmo
-  public async registerUser(
+  public async registerUser (
     userData: UserRegisterInput,
     accountData: AccountCreateInput
   ): Promise<{ userId: string, accountId: number, role: Role }> {
@@ -52,10 +51,10 @@ export abstract class UserRegisterTemplate {
   }
 
   // Métodos abstractos que deben implementar las subclases
-  protected abstract assignGlobalRole(tx: TX, userId: string): Promise<Role>
+  protected abstract assignGlobalRole (tx: TX, userId: string): Promise<Role>
 
   // Métodos concretos con implementación por defecto
-  protected async prepareUserData(userData: UserRegisterInput): Promise<InsertUser> {
+  protected async prepareUserData (userData: UserRegisterInput): Promise<InsertUser> {
     const id = crypto.randomUUID()
     const passwordHash = await hash(userData.passwordHash, SALT_ROUNDS)
 
@@ -72,23 +71,23 @@ export abstract class UserRegisterTemplate {
     }
   }
 
-  protected async createUser(tx: TX, userToInsert: InsertUser) {
+  protected async createUser (tx: TX, userToInsert: InsertUser) {
     const [newUser] = await tx.insert(users).values(userToInsert).returning({ id: users.id })
-    if (!newUser) throw new Error('Fallo al crear el usuario.')
+    if (newUser == null) throw new Error('Fallo al crear el usuario.')
     return newUser
   }
 
-  protected async createAccount(tx: TX, accountData: AccountCreateInput) {
+  protected async createAccount (tx: TX, accountData: AccountCreateInput) {
     const accountToInsert: InsertAccount = {
       accountName: accountData.accountName,
       type: accountData.type
     }
     const [newAccount] = await tx.insert(accounts).values(accountToInsert).returning({ id: accounts.id })
-    if (!newAccount) throw new Error('Fallo al crear la cuenta.')
+    if (newAccount == null) throw new Error('Fallo al crear la cuenta.')
     return newAccount
   }
 
-  protected async assignAccountRole(tx: TX, userId: string, accountId: number) {
+  protected async assignAccountRole (tx: TX, userId: string, accountId: number) {
     const accountUserToInsert: InsertAccountUser = {
       userId,
       accountId,

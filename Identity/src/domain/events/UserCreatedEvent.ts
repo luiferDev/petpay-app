@@ -1,14 +1,14 @@
-import { Role } from '../types/Role';
+import { Role } from '../types/Role'
 
 /**
  * @interface UserCreatedEventPayload
  * @description Datos esenciales para el evento de creación de usuario.
  */
 export interface UserCreatedEventPayload {
-  userId: number;
-  email: string;
-  fullName: string;
-  role: Role;
+  userId: number
+  email: string
+  fullName: string
+  role: Role
 }
 
 /**
@@ -19,16 +19,16 @@ export interface UserCreatedEventPayload {
  * y activación (ej. crear un ServiceProviderProfile o un PetProfile).
  */
 export class UserCreatedEvent {
-  public readonly name: string = 'user.created';
-  public readonly timestamp: Date;
-  public readonly payload: UserCreatedEventPayload;
+  public readonly name: string = 'user.created'
+  public readonly timestamp: Date
+  public readonly payload: UserCreatedEventPayload
 
   /**
    * @constructor
    * @param {UserCreatedEventPayload} payload - Los datos del usuario creado.
    */
-  constructor(payload: UserCreatedEventPayload) {
-    this.payload = payload;
-    this.timestamp = new Date();
+  constructor (payload: UserCreatedEventPayload) {
+    this.payload = payload
+    this.timestamp = new Date()
   }
 }

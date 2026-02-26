@@ -1,4 +1,4 @@
-import { UserResponse } from './UserResponse.dto';
+import { UserResponse } from './UserResponse.dto'
 
 /**
  * @interface LoginRequest
@@ -9,12 +9,12 @@ export interface LoginRequest {
   /**
    * Correo electrónico del usuario (clave para la búsqueda).
    */
-  email: string;
-  
+  email: string
+
   /**
    * Contraseña en texto plano (para ser comparada con el hash).
    */
-  password: string;
+  password: string
 }
 
 /**
@@ -25,15 +25,15 @@ export interface LoginResponse {
   /**
    * DTO con la información pública del usuario autenticado.
    */
-  user: UserResponse;
-  
+  user: UserResponse
+
   /**
    * Token JWT de corta duración para autorizar peticiones a la API.
    */
-  accessToken: string;
-  
+  accessToken: string
+
   /**
    * Token de larga duración para obtener un nuevo accessToken.
    */
-  refreshToken: string;
+  refreshToken: string
 }
