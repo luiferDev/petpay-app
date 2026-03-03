@@ -38,13 +38,13 @@ src/
 │   │   ├── LoginDTOs.ts
 │   │   ├── RegisterUser.dto.ts
 │   │   └── UserResponse.dto.ts
-│   ├── ports/                     # Interfaces (contratos)
-│   │   ├── IAccountRepository.ts
+│   ├── ports/                     # Interfaces (contratos) - re-exports from domain
+│   │   ├── IAccountRepository.ts  # re-export from domain/repositories
 │   │   ├── IEmailService.ts
 │   │   ├── IEventPublisher.ts
 │   │   ├── IRegistrationStrategy.ts
 │   │   ├── ITokenService.ts
-│   │   └── IUserRepository.ts
+│   │   └── IUserRepository.ts     # re-export from domain/repositories
 │   ├── strategies/                # Strategy Pattern para registro
 │   │   └── registration/
 │   │       ├── register.template.ts
@@ -64,8 +64,10 @@ src/
 │   ├── events/                    # Domain Events
 │   │   ├── UserCreatedEvent.ts
 │   │   └── ServiceProviderRegisteredEvent.ts
-│   ├── repositories/              # Interfaces de repositorio
-│   │   └── IUserRepository.ts
+│   ├── repositories/              # Interfaces de repositorio (Ports)
+│   │   ├── IUserRepository.ts
+│   │   ├── IAccountRepository.ts
+│   │   └── IOAuthUserRepository.ts
 │   └── types/
 │       └── Role.ts
 │
@@ -76,8 +78,9 @@ src/
 │   │   ├── drizzle/
 │   │   │   ├── client.ts         # Conexión a BD
 │   │   │   └── schema.ts         # Esquema de BD
-│   │   └── repositories/
-│   │       └── drizzle.user.repository.ts
+│   ├── repositories/              # Implementaciones (Adapters)
+│   │       ├── DrizzleUserAdapter.ts
+│   │       └── OAuthUserAdapter.ts
 │   ├── DI/                        # Inyección de dependencias
 │   │   ├── container.ts
 │   │   └── InjectionTokens.ts
@@ -164,6 +167,106 @@ export class User {
 
 ---
 
+### Const Types Pattern (REQUIRED)
+
+** ALWAYS: Create const object first, then extract type**
+```typescript
+// ✅ Good - Single source of truth
+const STATUS = {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  PENDING: "pending",
+} as const;
+
+type Status = (typeof STATUS)[keyof typeof STATUS];
+
+// ❌ NEVER: Direct union types
+type Status = "active" | "inactive" | "pending";
+```
+
+**Why?** Single source of truth, runtime values, autocomplete, easier refactoring.
+
+### Flat Interfaces (REQUIRED)
+
+```typescript
+// ✅ ALWAYS: One level depth, nested objects → dedicated interface
+interface UserAddress {
+  street: string;
+  city: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  address: UserAddress;  // Reference, not inline
+}
+
+interface Admin extends User {
+  permissions: string[];
+}
+
+// ❌ NEVER: Inline nested objects
+interface UserBad {
+  address: { street: string; city: string };  // NO!
+}
+```
+
+### Never Use `any`
+
+```typescript
+// ✅ Use unknown for truly unknown types
+function parse(input: unknown): User {
+  if (isUser(input)) return input;
+  throw new Error("Invalid input");
+}
+
+// ✅ Use generics for flexible types
+function first<T>(arr: T[]): T | undefined {
+  return arr[0];
+}
+
+// ❌ NEVER use any
+function parseBad(input: any): any { }
+```
+
+### Utility Types
+
+```typescript
+Pick<User, "id" | "name">     // Select fields
+Omit<User, "id">              // Exclude fields
+Partial<User>                 // All optional
+Required<User>                // All required
+Readonly<User>               // All readonly
+Record<string, User>          // Object type
+Extract<Union, "a" | "b">    // Extract from union
+Exclude<Union, "a">          // Exclude from union
+NonNullable<T | null>         // Remove null/undefined
+ReturnType<typeof fn>         // Function return type
+Parameters<typeof fn>         // Function params tuple
+```
+
+### Type Guards
+
+```typescript
+function isUser(value: unknown): value is User {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "name" in value
+  );
+}
+```
+
+### Import Types
+
+```typescript
+import type { User } from "./types";
+import { createUser, type Config } from "./utils";
+```
+
+---
+
 ## Imports
 
 ### Order and Grouping
@@ -210,6 +313,54 @@ export class RegisterUserUseCase {
 - Repository interfaces → `domain/repositories/`
 - Service interfaces → `application/ports/`
 - Use suffix `I` for interfaces: `IUserRepository`, `ITokenService`
+
+### Hexagonal Architecture Pattern
+
+This service follows **Hexagonal Architecture** (Ports & Adapters):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER                          │
+│                    (Use Cases, DTOs, Strategies)                │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────┐
+│                        DOMAIN LAYER                            │
+│              (Entities, Events, Repository Ports)               │
+│                                                                  │
+│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
+│  │   Repository Ports  │    │         Entities             │ │
+│  │  (Interfaces/Defs)  │    │   (Business Logic/Aggregates) │ │
+│  │ - IUserRepository   │    │   - User                     │ │
+│  │ - IAccountRepository│    │   - Account                  │ │
+│  │ - IOAuthUserRepo    │    │                              │ │
+│  └─────────────────────┘    └─────────────────────────────┘ │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────┐
+│                    INFRASTRUCTURE LAYER                        │
+│                   (Adapters, Implementations)                  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                   Database Adapters                      │  │
+│  │  - DrizzleUserAdapter    (implements IUserRepository)  │  │
+│  │  - OAuthUserAdapter      (implements IOAuthUserRepository)│ │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                    Service Adapters                      │  │
+│  │  - JwtTokenProvider     (implements ITokenProvider)     │  │
+│  │  - NodemailerService   (implements IEmailService)       │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Conventions:**
+- Ports (interfaces) live in `domain/repositories/`
+- Adapters (implementations) live in `infrastructure/database/repositories/`
+- Use **Adapter** suffix for implementations: `XxxAdapter`
+- Application ports (`application/ports/`) re-export from domain for backward compatibility
+- DI container maps ports to adapters in `infrastructure/DI/container.ts`
 
 ---
 
