@@ -1,18 +1,16 @@
 # AGENTS.md - Petpay-app Agent Guidelines
 
-This is the main index file for the Petpay-app monorepo. Each service has its own detailed AGENTS.md with specific guidelines.
+This is the main index file for the Petpay-app monorepo containing three microservices.
 
 ---
 
 ## Project Overview
 
-**Petpay-app** is a monorepo containing three microservices for a pet-related marketplace platform:
-
-| Service | Location | Technology | Database |
-|---------|----------|-----------|----------|
-| **Identity** | `Identity/` | TypeScript / Bun / Express / Drizzle | PostgreSQL |
-| **Marketplace** | `marketplace/` | Go / Gin / GORM | PostgreSQL |
-| **Catalog & Offers** | `catalog-&-offers/` | Go / Gin / GORM | PostgreSQL |
+| Service | Location | Technology | Database | Port |
+|---------|----------|------------|----------|------|
+| **Identity** | `Identity/` | TypeScript / Bun / Express / Drizzle | PostgreSQL | 3000 |
+| **Marketplace** | `marketplace/` | Go / Gin / GORM | PostgreSQL | 8080 |
+| **Catalog & Offers** | `catalog-&-offers/` | Go / Gin / GORM | PostgreSQL | 8081 |
 
 ---
 
@@ -21,61 +19,37 @@ This is the main index file for the Petpay-app monorepo. Each service has its ow
 ### Identity Service (TypeScript/Bun)
 ```bash
 cd Identity
-
-# Install dependencies
-bun install
-
-# Run development server
-bun run dev
-
-# Lint code
-bun run lint
-
-# Lint and auto-fix
-bun run lint:fix
-
-# Run tests
-bun test
-
-# Run single test
-bun test auth.test.ts
-
-# Database migrations
-bunx drizzle-kit generate
-bunx drizzle-kit push
+bun install                    # Install dependencies
+bun run dev                    # Run development (watch mode)
+bun run start                  # Start production server
+bun run lint                   # Lint code (ts-standard)
+bun run lint:fix               # Lint and auto-fix
+bun test                       # Run all tests
+bun test auth.test.ts          # Run single test file
+bun test --coverage            # Run with coverage
+bunx drizzle-kit generate      # Generate migrations
+bunx drizzle-kit push          # Push migrations to DB
 ```
 
 ### Go Services (Marketplace & Catalog)
 ```bash
 cd marketplace  # or catalog-&-offers
-
-# Download dependencies
-go mod download
-
-# Build
-go build -o bin/service ./cmd/main.go
-
-# Run
-go run ./cmd/main.go
-
-# Run all tests
-go test ./...
-
-# Run single test
-go test -v -run TestFunctionName ./internal/application
-
-# Lint (install golangci-lint first)
-golangci-lint run
-
-# Format code
-go fmt ./...
+go mod download                  # Download dependencies
+go build -o bin/service ./cmd/main.go  # Build
+go run ./cmd/main.go             # Run development
+go test ./...                    # Run all tests
+go test -v -run TestName ./path   # Run single test
+go test -cover ./...             # Run with coverage
+golangci-lint run                # Lint (install first)
+go fmt ./...                     # Format code
+go mod tidy                      # Tidy dependencies
 ```
 
 ---
 
 ## Architecture Patterns
 
-### Identity Service (Clean Architecture)
+### Identity (Clean Architecture)
 ```
 src/
 ├── application/     # Use cases, DTOs, strategies, ports
@@ -93,7 +67,7 @@ internal/
 
 ---
 
-## Common Patterns
+## Code Style Guidelines
 
 ### Naming Conventions
 
@@ -106,19 +80,113 @@ internal/
 | Database columns | snake_case | snake_case |
 | JSON fields | camelCase | camelCase |
 
-### Error Handling
+### TypeScript Specific
 
-**TypeScript (Identity)**:
-- Use custom DomainError classes extending base Error
-- Include `suggestedHttpCode` for HTTP status mapping
+**Always Use Explicit Types:**
+```typescript
+// ✅ Good
+public async execute(request: RegisterUserRequest): Promise<UserResponse> {
+  const user: User = await this.userRepository.findById(id);
+  return user;
+}
 
-**Go**:
-- Return errors explicitly with `fmt.Errorf` and `%w` wrapping
-- Use custom error types or error variables
+// ❌ Bad - never omit types
+public async execute(request) {
+  const user = await this.userRepository.findById(id);
+  return user;
+}
+```
 
-### Dependency Injection
+**Prefer Interfaces for Objects, Types for Unions:**
+```typescript
+interface UserProps { id?: number; email: string; }
+type Role = 'USER' | 'ADMIN' | 'SERVICE_PROVIDER';
+```
 
-**TypeScript**: Use tsyringe with constructor injection
+**Use readonly for Immutable Data:**
+```typescript
+export class User {
+  public readonly id: number | undefined;
+}
+```
+
+### Go Specific
+
+**Struct Tags for GORM/JSON:**
+```go
+type Order struct {
+    gorm.Model
+    OrderNumber  uint64  `gorm:"column:order_number" json:"orderNumber"`
+    CustomerId   string  `gorm:"column:customer_id; index" json:"customerId"`
+}
+```
+
+---
+
+## Imports
+
+### TypeScript (Identity)
+Order imports by: external libs → internal modules → relative paths
+```typescript
+// 1. External libraries
+import { Request, Response } from 'express';
+
+// 2. Internal modules (from application/, domain/)
+import { User } from '../../../domain/entities/User';
+
+// 3. Relative paths (same layer)
+import { RegisterUserRequest } from '../../dtos/RegisterUser.dto';
+```
+
+### Go
+Order imports by: standard lib → external packages → internal packages
+```go
+import (
+    "fmt"
+    "net/http"
+    "github.com/gin-gonic/gin"
+    "petpay/marketplace-service/internal/application/core"
+)
+```
+
+---
+
+## Error Handling
+
+### TypeScript: Custom Domain Errors
+```typescript
+export class DomainError extends Error {
+  public readonly suggestedHttpCode: number;
+  constructor(message: string, suggestedHttpCode = 500, name = 'DomainError') {
+    super(message);
+    this.name = name;
+    this.suggestedHttpCode = suggestedHttpCode;
+  }
+}
+
+export class UserNotFoundError extends DomainError {
+  constructor(message = 'User not found') {
+    super(message, 404, 'UserNotFoundError');
+  }
+}
+```
+
+### Go: Return Errors Explicitly
+```go
+func (s *OrderServiceImpl) GetOrderById(id string) (*core.Order, error) {
+    order, err := s.repo.FindById(id)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get order %s: %w", id, err)
+    }
+    return order, nil
+}
+```
+
+---
+
+## Dependency Injection
+
+### TypeScript: tsyringe with Constructor Injection
 ```typescript
 constructor(
   private readonly userRepository: IUserRepository,
@@ -126,11 +194,29 @@ constructor(
 ) {}
 ```
 
-**Go**: Manual dependency injection via constructors
+### Go: Manual DI via Constructors
 ```go
 func NewOrderService(repo repository.OrderRepository) *OrderServiceImpl {
     return &OrderServiceImpl{repo: repo}
 }
+```
+
+---
+
+## Testing Patterns
+
+### TypeScript (bun:test)
+```bash
+bun test                                    # Run all
+bun test auth.test.ts                       # Single file
+bun test --coverage                         # With coverage
+```
+
+### Go
+```bash
+go test ./...                               # Run all
+go test -v -run TestCreateOrder ./internal/application  # Single test
+go test -cover ./...                        # With coverage
 ```
 
 ---
@@ -148,7 +234,7 @@ func NewOrderService(repo repository.OrderRepository) *OrderServiceImpl {
 
 Use conventional commits:
 - `feat:` New feature
-- `fix:` Bug fix
+- `fix:` Bug fix  
 - `chore:` Maintenance
 - `refactor:` Code refactoring
 - `docs:` Documentation
@@ -163,32 +249,12 @@ refactor(catalog): extract product service interface
 
 ---
 
-## Environment Variables
-
-Create `.env` files (never commit to git):
-
-### Identity Service
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/petpay_identity
-JWT_SECRET=your-secret-key
-RABBITMQ_URL=amqp://localhost:5672
-```
-
-### Go Services
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/petpay_marketplace
-PORT=8080
-```
-
----
-
 ## Service-Specific Guidelines
 
-For detailed guidelines, code style, and architecture for each service, see:
-
-- **Identity**: [`Identity/AGENTS.md`](Identity/AGENTS.md)
-- **Marketplace**: [`marketplace/AGENTS.md`](marketplace/AGENTS.md)
-- **Catalog & Offers**: [`catalog-&-offers/AGENTS.md`](catalog-&-offers/AGENTS.md)
+For detailed guidelines per service, see:
+- **Identity**: [`Identity/AGENTS.md`](Identity/AGENTS.md) - Clean Architecture, Drizzle, Zod
+- **Marketplace**: [`marketplace/AGENTS.md`](marketplace/AGENTS.md) - Hexagonal, GORM
+- **Catalog**: [`catalog-&-offers/AGENTS.md`](catalog-&-offers/AGENTS.md) - Hexagonal with adapters
 
 ---
 
