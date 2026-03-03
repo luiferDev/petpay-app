@@ -1,0 +1,39 @@
+# Kustomization for petpay-app base configuration
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: petpay
+
+# Resources to apply
+resources:
+  - namespace.yaml
+  - configmaps.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - identity.yaml
+  - marketplace.yaml
+  - catalog.yaml
+  - ingress.yaml
+
+# Common labels for all resources
+commonLabels:
+  app.kubernetes.io/part-of: petpay-app
+  app.kubernetes.io/managed-by: kustomize
+
+# Replicas para cada servicio
+replicas:
+  - name: identity
+    count: 2
+  - name: marketplace
+    count: 2
+  - name: catalog
+    count: 2
+
+# Image updates
+images:
+  - name: petpay/identity
+    newTag: latest
+  - name: petpay/marketplace
+    newTag: latest
+  - name: petpay/catalog
+    newTag: latest

@@ -1,0 +1,41 @@
+# ConfigMap para Identity Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: identity-config
+  namespace: petpay
+  labels:
+    app: identity
+    app.kubernetes.io/part-of: petpay-app
+data:
+  PORT: "3000"
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+---
+# ConfigMap para Marketplace Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marketplace-config
+  namespace: petpay
+  labels:
+    app: marketplace
+    app.kubernetes.io/part-of: petpay-app
+data:
+  PORT: "8080"
+  GIN_MODE: "release"
+  LOG_LEVEL: "info"
+---
+# ConfigMap para Catalog & Offers Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-config
+  namespace: petpay
+  labels:
+    app: catalog
+    app.kubernetes.io/part-of: petpay-app
+data:
+  PORT: "8081"
+  GIN_MODE: "release"
+  LOG_LEVEL: "info"

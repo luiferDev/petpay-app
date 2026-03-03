@@ -1,0 +1,8 @@
+# Namespace para petpay-app
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petpay
+  labels:
+    app.kubernetes.io/name: petpay
+    app.kubernetes.io/part-of: petpay-app

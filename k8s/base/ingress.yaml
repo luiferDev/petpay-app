@@ -1,0 +1,123 @@
+# Ingress with Load Balancer and path-based routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: petpay-ingress
+  namespace: petpay
+  labels:
+    app.kubernetes.io/name: petpay-ingress
+    app.kubernetes.io/part-of: petpay-app
+  annotations:
+    # Habilitar balanceador de carga
+    nginx.ingress.kubernetes.io/load-balance: round_robin
+    # Configuración de proxy
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Rate limiting (proteger contra DDoS)
+    nginx.ingress.kubernetes.io/limit-connections: "100"
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    # SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+spec:
+  ingressClassName: nginx
+  rules:
+    # Regla para identidad (auth)
+    - host: petpay.local
+      http:
+        paths:
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+    # Regla para marketplace
+    - host: petpay.local
+      http:
+        paths:
+          - path: /api/v1/marketplace
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace
+                port:
+                  number: 8080
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace
+                port:
+                  number: 8080
+    # Regla para catalog
+    - host: petpay.local
+      http:
+        paths:
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+          - path: /api/v1/categories
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+          - path: /api/v1/services
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+  # TLS Configuration (descomentar para producción)
+  # tls:
+  #   - hosts:
+  #       - petpay.local
+  #     secretName: petpay-tls-secret
+---
+# Service tipo LoadBalancer para exposición externa
+apiVersion: v1
+kind: Service
+metadata:
+  name: petpay-lb
+  namespace: petpay
+  labels:
+    app.kubernetes.io/name: petpay-lb
+    app.kubernetes.io/part-of: petpay-app
+  annotations:
+    # Para AWS: service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    # Para GCP: cloud.google.com/load-balancer-type: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: nginx-ingress
+    app.kubernetes.io/component: controller
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
