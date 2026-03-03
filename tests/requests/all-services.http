@@ -1,0 +1,10 @@
+### All Services Health Check
+
+### Identity Health
+GET http://localhost:3000/health
+
+### Marketplace Health
+GET http://localhost:8080/health
+
+### Catalog Health
+GET http://localhost:8081/health

@@ -1,0 +1,188 @@
+# ===================================================================
+# PETPAY-APP - Manual Testing Guide
+# ===================================================================
+# 
+# Instrucciones:
+# 1. Asegúrate de que kind esté ejecutándose: kind get clusters
+# 2. Carga las imágenes: kind load docker-image petpay-app-*.latest --name petpay-test
+# 3. Despliega: kubectl apply -k k8s/overlays/dev
+# 4. Espera a que los pods estén Running: kubectl get pods -n petpay-dev
+# 5. Ejecuta port-forward en terminals separadas o en background:
+#    kubectl port-forward -n petpay-dev svc/dev-identity 3000:3000 &
+#    kubectl port-forward -n petpay-dev svc/dev-marketplace 8080:8080 &
+#    kubectl port-forward -n petpay-dev svc/dev-catalog 8081:8081 &
+# 6. Ejecuta las peticiones con curl o importa este archivo en Postman/Bruno
+#
+# ===================================================================
+
+# ===================================================================
+# IDENTITY SERVICE (Puerto 3000)
+# ===================================================================
+
+# --- Health Check ---
+GET http://localhost:3000/health
+
+# --- Root Endpoint ---
+GET http://localhost:3000/
+
+# --- Registro de Usuario ---
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123",
+  "firstName": "Test",
+  "lastName": "User",
+  "role": "USER"
+}
+
+# --- Login ---
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+# --- Obtener Usuario por ID (requiere token) ---
+GET http://localhost:3000/auth/users/1
+Authorization: Bearer <TOKEN>
+
+# --- Actualizar Usuario (requiere token) ---
+PATCH http://localhost:3000/auth/users/1
+Authorization: Bearer <TOKEN>
+Content-Type: application/json
+
+{
+  "firstName": "NuevoNombre"
+}
+
+# --- Verificar Email ---
+GET http://localhost:3000/auth/verify-email?token=<TOKEN>
+
+# --- Solicitar Reset de Contraseña ---
+POST http://localhost:3000/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+# --- OAuth - GitHub ---
+GET http://localhost:3000/auth/oauth/github
+
+# --- OAuth - Google ---
+GET http://localhost:3000/auth/oauth/google
+
+
+# ===================================================================
+# MARKETPLACE SERVICE (Puerto 8080)
+# ===================================================================
+
+# --- Health Check ---
+GET http://localhost:8080/health
+
+# --- Obtener Todos los Pedidos ---
+GET http://localhost:8080/api/v1/orders/
+
+# --- Obtener Pedido por ID ---
+GET http://localhost:8080/api/v1/orders/1
+
+# --- Crear Pedido ---
+POST http://localhost:8080/api/v1/orders/
+Content-Type: application/json
+
+{
+  "customerId": "cust-001",
+  "storeProfileId": "store-001",
+  "subtotal": 100.00,
+  "shippingCost": 10.00,
+  "tax": 8.00,
+  "discount": 5.00,
+  "totalAmount": 113.00,
+  "currency": 1.0,
+  "shippingAddressId": "addr-001",
+  "billingAddressId": "addr-001",
+  "customerNotes": "Por favor entregar en la puerta principal",
+  "estimatedDelivery": "2026-03-10"
+}
+
+# --- Actualizar Pedido ---
+PATCH http://localhost:8080/api/v1/orders/1
+Content-Type: application/json
+
+{
+  "status": "CONFIRMED",
+  "customerNotes": "Entrega urgente"
+}
+
+# --- Eliminar Pedido ---
+DELETE http://localhost:8080/api/v1/orders/1
+
+
+# ===================================================================
+# CATALOG SERVICE (Puerto 8081)
+# ===================================================================
+
+# --- Health Check ---
+GET http://localhost:8081/health
+
+# --- Obtener Todos los Productos ---
+GET http://localhost:8081/api/v1/products/all
+
+# --- Obtener Producto por ID ---
+GET http://localhost:8081/api/v1/products/1
+
+# --- Buscar Productos por Categoría ---
+GET http://localhost:8081/api/v1/products?category=electronics
+
+# --- Crear Producto ---
+POST http://localhost:8081/api/v1/products
+Content-Type: application/json
+
+{
+  "storeProfileId": 1,
+  "categoryId": 1,
+  "product_name": "Smartphone Galaxy S24",
+  "description": "Teléfono inteligente de última generación",
+  "brand": "Samsung",
+  "price": 999.99,
+  "discountPrice": 899.99,
+  "stockQuantity": 50,
+  "sku": "SM-GALAXY-S24",
+  "isActive": true,
+  "isFeatured": true,
+  "weight": 0.5,
+  "dimensions": "15x7x0.8"
+}
+
+# --- Actualizar Producto ---
+PATCH http://localhost:8081/api/v1/products/1
+Content-Type: application/json
+
+{
+  "price": 849.99,
+  "stockQuantity": 45
+}
+
+# --- Eliminar Producto ---
+DELETE http://localhost:8081/api/v1/products/1
+
+
+# ===================================================================
+# COMBINED TESTS - Flujo Completo
+# ===================================================================
+
+# 1. Verificar salud de todos los servicios
+# (Ejecutar en terminal separada)
+# while true; do 
+#   echo "=== Identity ===" && curl -s http://localhost:3000/health
+#   echo ""
+#   echo "=== Marketplace ===" && curl -s http://localhost:8080/health  
+#   echo ""
+#   echo "=== Catalog ===" && curl -s http://localhost:8081/health
+#   echo ""
+#   sleep 10
+# done

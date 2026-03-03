@@ -1,0 +1,8 @@
+### Identity Service Health Check
+GET http://localhost:3000/health
+
+###
+
+### Identity Service Root
+GET http://localhost:3000/
+

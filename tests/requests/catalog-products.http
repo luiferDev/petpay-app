@@ -1,0 +1,40 @@
+### Catalog Service Health Check
+GET http://localhost:8081/health
+
+###
+
+### Catalog - Get All Products
+GET http://localhost:8081/api/v1/products/all
+
+###
+
+### Catalog - Get Product by ID
+GET http://localhost:8081/api/v1/products/1
+
+###
+
+### Catalog - Get Products by Category
+GET http://localhost:8081/api/v1/products?category_id=1
+
+###
+
+### Catalog - Create Product
+POST http://localhost:8081/api/v1/products
+Content-Type: application/json
+
+{
+  "storeProfileId": 1,
+  "categoryId": 1,
+  "product_name": "Test Product",
+  "description": "Test Description",
+  "brand": "TestBrand",
+  "price": 99.99,
+  "discountPrice": 79.99,
+  "stockQuantity": 100,
+  "sku": "TEST-001",
+  "isActive": true,
+  "isFeatured": false,
+  "weight": 1.5,
+  "dimensions": "10x10x10"
+}
+
