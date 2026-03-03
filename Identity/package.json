@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run server/index.ts",
-    "dev": "bun --watch server/index.ts",
+    "start": "bun run src/infrastructure/http/server.ts",
+    "dev": "bun --watch src/infrastructure/http/server.ts",
     "lint": "ts-standard",
     "lint:fix": "ts-standard --fix",
     "test": "bun test",
@@ -58,6 +58,7 @@
     "prisma": "^6.18.0",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
+    "ulid": "^2.3.0",
     "winston": "^3.18.3",
     "zod": "^4.1.12"
   },

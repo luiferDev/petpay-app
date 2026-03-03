@@ -10,7 +10,15 @@
 
     // Module resolution for Node packages (resolves subpath imports like "drizzle-orm/node-postgres")
     "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "noEmit": true,
+
+    // Base URL for path resolution
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"]
+    },
 
     // Best practices
     "strict": true,
