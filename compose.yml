@@ -1,0 +1,114 @@
+services:
+  # Identity Service
+  identity:
+    build:
+      context: ./Identity
+      dockerfile: Dockerfile
+    container_name: petpay-identity
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:changeme@postgres:5432/petpay
+      - JWT_SECRET=changeme-jwt-secret-min-32-chars
+      - JWT_EXPIRES_IN=7d
+      - PORT=3000
+      - RABBITMQ_URL=amqp://localhost:5672
+      - OAUTH_STATE_SECRET=changeme-oauth-state-secret-min-32
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - petpay-network
+    restart: unless-stopped
+
+  # Marketplace Service
+  marketplace:
+    build:
+      context: ./marketplace
+      dockerfile: Dockerfile
+    container_name: petpay-marketplace
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay
+      - DB_PORT=5432
+      - PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - petpay-network
+    restart: unless-stopped
+
+  # Catalog Service
+  catalog:
+    build:
+      context: ./catalog-&-offers
+      dockerfile: Dockerfile
+    container_name: petpay-catalog
+    ports:
+      - "8081:8081"
+    environment:
+      - GIN_MODE=release
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay
+      - DB_PORT=5432
+      - PORT=8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - petpay-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: petpay-postgres
+    environment:
+      - POSTGRES_DB=petpay
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changeme
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - petpay-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx Reverse Proxy / Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: petpay-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - identity
+      - marketplace
+      - catalog
+    networks:
+      - petpay-network
+    restart: unless-stopped
+
+networks:
+  petpay-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
