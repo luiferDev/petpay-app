@@ -11,6 +11,7 @@ RUN bun install
 
 # Copy source code
 COPY src/ ./src/
+COPY templates/ ./templates/
 COPY drizzle.config.json ./
 
 # Create non-root user for security
