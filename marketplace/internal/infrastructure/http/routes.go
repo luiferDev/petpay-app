@@ -1,10 +1,11 @@
 package http
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func SetupRouter(controller *Controller) *gin.Engine {
 	r := gin.Default()
-	
 	api := r.Group("/api/v1")
 	{
 		orders := api.Group("/orders")
@@ -16,6 +17,14 @@ func SetupRouter(controller *Controller) *gin.Engine {
 			orders.DELETE("/:id", controller.DeleteOrder)
 		}
 	}
-	
+
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "marketplace",
+		})
+	})
+
 	return r
 }
