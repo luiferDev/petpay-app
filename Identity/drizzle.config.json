@@ -3,6 +3,6 @@
   "schema": "./src/infrastructure/database/drizzle/schema.ts",
   "dialect": "postgresql",
   "dbCredentials": {
-    "url": "postgres://postgres:changeme@postgres:5432/petpay_users"
+    "url": "postgres://postgres:changeme@postgres:5432/petpay"
   }
 }
