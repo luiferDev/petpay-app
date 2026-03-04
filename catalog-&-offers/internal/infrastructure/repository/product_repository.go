@@ -2,7 +2,7 @@ package repository
 
 import (
 	"petpay/catalog-offers-service/internal/application/core"
-	"petpay/catalog-offers-service/internal/application/ports/out"
+	Out "petpay/catalog-offers-service/internal/application/ports/Out"
 
 	"gorm.io/gorm"
 )
@@ -11,7 +11,7 @@ type ProductRepository struct {
 	db *gorm.DB
 }
 
-func NewProductRepository(db *gorm.DB) out.ProductRepositoryPort {
+func NewProductRepository(db *gorm.DB) Out.ProductRepositoryPort {
 	return &ProductRepository{db: db}
 }
 

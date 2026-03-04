@@ -1,6 +1,8 @@
 package http
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func SetupRouter(controller *Controller) *gin.Engine {
 	r := gin.Default()
@@ -13,5 +15,14 @@ func SetupRouter(controller *Controller) *gin.Engine {
 		api.PATCH("/products/:id", controller.Update)
 		api.DELETE("/products/:id", controller.Delete)
 	}
+
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "catalog",
+		})
+	})
+
 	return r
 }

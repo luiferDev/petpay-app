@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	"petpay/catalog-offers-service/internal/application/core"
-	"petpay/catalog-offers-service/internal/application/ports/In"
+	"petpay/catalog-offers-service/internal/application/ports/in"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +18,26 @@ func NewController(productService in.ProductServicePort) *Controller {
 	return &Controller{
 		productService: productService,
 	}
+}
+
+// HealthCheckHandler verifica el estado de salud del servicio
+func HealthCheckHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "healthy",
+		"service":   "catalog",
+		"timestamp": gin.H{"$date": gin.H{"$numberLong": "0"}},
+		"uptime":    0,
+	})
+}
+
+// ReadyCheckHandler verifica si el servicio está listo para recibir tráfico
+func ReadyCheckHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "ready",
+		"service":   "catalog",
+		"timestamp": gin.H{"$date": gin.H{"$numberLong": "0"}},
+		"uptime":    0,
+	})
 }
 
 func (ctrl *Controller) Create(c *gin.Context) {
@@ -95,7 +115,7 @@ func (ctrl *Controller) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	updatedOrder, err := ctrl.productService.UpdateProduct(uint(parsedId), &product)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -116,10 +136,5 @@ func (ctrl *Controller) Delete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Order deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
 }
-
-
-
-
-
