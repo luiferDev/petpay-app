@@ -1,27 +1,35 @@
-// src/infrastructure/database/repositories/OAuthUserRepository.ts
+// src/infrastructure/database/repositories/OAuthUserAdapter.ts
 
 import { eq, and } from 'drizzle-orm'
-import { getDb, DbClient } from '../database/drizzle/client'
-import { userOAuthProviders } from '../database/drizzle/schema'
+import { type DbClient } from '../drizzle/client'
+import { userOAuthProviders } from '../drizzle/schema'
 import {
   IOAuthUserRepository,
   CreateOAuthUserRecord,
   OAuthUserRecord,
   UpdateOAuthTokens
-} from '../../application/ports/IOAuthUserRepository'
+} from '../../../domain/repositories/IOAuthUserRepository'
+import { injectable, singleton, inject } from 'tsyringe'
+import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 
 /**
- * @class OAuthUserRepositoryImpl
- * @description Implementación del repositorio de proveedores OAuth usando Drizzle ORM.
+ * @class OAuthUserAdapter
+ * @description Adaptador que implementa el contrato IOAuthUserRepository (Port)
+ * utilizando Drizzle ORM y PostgreSQL (Adapter).
+ * Es responsable de mapear registros OAuth de la base de datos a la interfaz del dominio.
+ * @author Petpay Architecture Team
+ * @version 1.0
  */
-export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
+@injectable()
+@singleton()
+export class OAuthUserAdapter implements IOAuthUserRepository {
   private readonly db: DbClient
 
-  constructor (db?: DbClient) {
-    this.db = db ?? getDb()
+  constructor(@inject(INJECTION_TOKENS.DB_CLIENT) db: DbClient) {
+    this.db = db
   }
 
-  async findByProviderAndId (
+  async findByProviderAndId(
     provider: 'google' | 'github',
     providerUserId: string
   ): Promise<OAuthUserRecord | null> {
@@ -40,10 +48,10 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
       return null
     }
 
-    return this.mapToRecord(result[0])
+    return this.mapToRecord(result[0]!)
   }
 
-  async findByUserIdAndProvider (
+  async findByUserIdAndProvider(
     userId: string,
     provider: 'google' | 'github'
   ): Promise<OAuthUserRecord | null> {
@@ -62,10 +70,10 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
       return null
     }
 
-    return this.mapToRecord(result[0])
+    return this.mapToRecord(result[0]!)
   }
 
-  async findByUserId (userId: string): Promise<OAuthUserRecord[]> {
+  async findByUserId(userId: string): Promise<OAuthUserRecord[]> {
     const result = await this.db
       .select()
       .from(userOAuthProviders)
@@ -74,7 +82,7 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
     return result.map(this.mapToRecord)
   }
 
-  async create (record: CreateOAuthUserRecord): Promise<OAuthUserRecord> {
+  async create(record: CreateOAuthUserRecord): Promise<OAuthUserRecord> {
     const [created] = await this.db
       .insert(userOAuthProviders)
       .values({
@@ -87,10 +95,14 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
       })
       .returning()
 
+    if (!created) {
+      throw new Error('Failed to create OAuth user record')
+    }
+
     return this.mapToRecord(created)
   }
 
-  async updateTokens (id: string, tokens: UpdateOAuthTokens): Promise<void> {
+  async updateTokens(id: string, tokens: UpdateOAuthTokens): Promise<void> {
     await this.db
       .update(userOAuthProviders)
       .set({
@@ -102,13 +114,13 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
       .where(eq(userOAuthProviders.id, id))
   }
 
-  async delete (id: string): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.db
       .delete(userOAuthProviders)
       .where(eq(userOAuthProviders.id, id))
   }
 
-  async deleteByUserId (userId: string): Promise<void> {
+  async deleteByUserId(userId: string): Promise<void> {
     await this.db
       .delete(userOAuthProviders)
       .where(eq(userOAuthProviders.userId, userId))
@@ -119,7 +131,7 @@ export class OAuthUserRepositoryImpl implements IOAuthUserRepository {
    * @method mapToRecord
    * @description Mapea el resultado de Drizzle a la interfaz OAuthUserRecord.
    */
-  private mapToRecord (
+  private mapToRecord(
     dbRecord: typeof userOAuthProviders.$inferSelect
   ): OAuthUserRecord {
     return {

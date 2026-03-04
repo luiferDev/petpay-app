@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { inject, injectable } from 'tsyringe'
+import { inject, injectable, container } from 'tsyringe'
 import { OAuthProviderFactory } from '../../services/OAuthProviderFactory'
 import { OAuthLoginUseCase } from '../../../application/use-case/oauth/OAuthLoginUseCase'
 import { LinkOAuthProviderUseCase } from '../../../application/use-case/oauth/LinkOAuthProviderUseCase'
@@ -7,7 +7,7 @@ import { DomainError } from '../../../domain/errors/DomainError'
 import { logger } from '../../../shared/utils/logger'
 import { isOAuthEnabled, isProviderConfigured } from '../../config/env'
 import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
-import { ITokenProvider } from '../../../application/ports/ITokenService'
+import { ITokenService } from '../../../application/ports/ITokenService'
 import { IOAuthUserRepository } from '../../../application/ports/IOAuthUserRepository'
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { OAuthStateManager } from '../../services/OAuthStateManager'
@@ -24,7 +24,7 @@ export class OAuthController {
     @inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
-    private readonly tokenProvider: ITokenProvider,
+    private readonly tokenProvider: ITokenService,
     @inject(INJECTION_TOKENS.OAUTH_STATE_MANAGER)
     private readonly stateManager: OAuthStateManager
   ) {}
@@ -37,7 +37,7 @@ export class OAuthController {
     const { provider } = req.params
 
     // Validate provider
-    if (!this.isValidProvider(provider)) {
+    if (!provider || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
         message: `Invalid OAuth provider: ${provider}. Supported providers: google, github`
@@ -102,7 +102,7 @@ export class OAuthController {
     const { code, state } = req.query
 
     // Validate provider
-    if (!this.isValidProvider(provider)) {
+    if (!provider || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
         message: `Invalid OAuth provider: ${provider}`
@@ -126,16 +126,8 @@ export class OAuthController {
     res.clearCookie('oauth_state')
 
     try {
-      const oauthProvider = OAuthProviderFactory.getProvider(provider as 'google' | 'github')
-
-      // Create use case instance
-      const oauthLoginUseCase = new OAuthLoginUseCase(
-        oauthProvider,
-        this.oauthUserRepository,
-        this.userRepository,
-        this.tokenProvider,
-        this.stateManager
-      )
+      // Create use case instance via DI container
+      const oauthLoginUseCase = container.resolve(OAuthLoginUseCase)
 
       // Execute OAuth login
       const result = await oauthLoginUseCase.execute({
@@ -193,7 +185,7 @@ export class OAuthController {
     }
 
     // Validate provider
-    if (!this.isValidProvider(provider)) {
+    if (!provider || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
         message: `Invalid OAuth provider: ${provider}`
@@ -217,17 +209,10 @@ export class OAuthController {
     res.clearCookie('oauth_state')
 
     try {
-      const oauthProvider = OAuthProviderFactory.getProvider(provider as 'google' | 'github')
+      // Use container to resolve use case
+      const linkOAuthProviderUseCase = container.resolve(LinkOAuthProviderUseCase)
 
-      // Create use case instance
-      const linkUseCase = new LinkOAuthProviderUseCase(
-        oauthProvider,
-        this.oauthUserRepository,
-        this.tokenProvider,
-        this.stateManager
-      )
-
-      const result = await linkUseCase.execute({
+      const result = await linkOAuthProviderUseCase.execute({
         userId,
         provider: provider as 'google' | 'github',
         code: code as string,

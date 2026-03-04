@@ -1,6 +1,6 @@
 // src/infrastructure/messaging/RabbitMQEventPublisher.ts
 
-import amqp, { Channel, Connection } from 'amqplib'
+import * as amqp from 'amqplib'
 
 import { Config } from '../config/env'
 import { IEventPublisher } from '../../application/ports/IEventPublisher'
@@ -22,8 +22,8 @@ const DOMAIN_EVENTS_EXCHANGE = 'petpay.domain.events'
  */
 @injectable()
 export class RabbitMQEventPublisher implements IEventPublisher {
-  private connection: Connection | null = null
-  private channel: Channel | null = null
+  private connection: amqp.Connection | null = null
+  private channel: amqp.Channel | null = null
 
   constructor () {
     this.initializeConnection()
@@ -36,14 +36,15 @@ export class RabbitMQEventPublisher implements IEventPublisher {
   private async initializeConnection (): Promise<void> {
     try {
       logger.info('Attempting to connect to RabbitMQ...')
-      this.connection = await amqp.connect(Config.RABBITMQ_URL)
+      const conn = await amqp.connect(Config.RABBITMQ_URL)
+      this.connection = conn as unknown as amqp.Connection
 
       // Manejar errores de conexión (ej. reconexión, logging)
-      this.connection.on('error', (err) => {
+      conn.on('error', (err: any) => {
         logger.error('RabbitMQ connection error. Implement reconnection logic here.', { error: err.message })
       })
 
-      this.channel = await this.connection.createChannel()
+      this.channel = await conn.createChannel()
 
       // Declarar exchange como Topic para asegurar que exista (durable: true)
       await this.channel.assertExchange(DOMAIN_EVENTS_EXCHANGE, 'topic', {
@@ -103,7 +104,7 @@ export class RabbitMQEventPublisher implements IEventPublisher {
    */
   public async close (): Promise<void> {
     if (this.connection) {
-      await this.connection.close()
+      await (this.connection as any).close()
       logger.info('✅ RabbitMQ connection closed.')
     }
   }

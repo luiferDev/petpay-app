@@ -5,7 +5,7 @@ import { Role } from '../types/Role'
  * @description Datos esenciales para el evento de creación de usuario.
  */
 export interface UserCreatedEventPayload {
-  userId: number
+  userId: string
   email: string
   fullName: string
   role: Role

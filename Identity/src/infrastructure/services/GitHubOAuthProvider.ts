@@ -119,7 +119,7 @@ export class GitHubOAuthProvider implements IOAuthProvider {
           verified: boolean
         }>
         const primaryEmail = emails.find(e => e.primary && e.verified)
-        email = primaryEmail?.email ?? emails[0]?.email
+        email = primaryEmail?.email ?? emails[0]?.email ?? null
       }
     }
 

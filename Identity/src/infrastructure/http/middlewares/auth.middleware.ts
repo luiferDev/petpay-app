@@ -1,19 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 
-import { UserRole } from '../interfaces/IUserRepository'
-import jwt from 'jsonwebtoken'
+import { UserRole } from '../../../domain/types/Role'
+import * as jwt from 'jsonwebtoken'
 import { logger } from '../../../shared/utils/logger'
-
-// Extiende la interfaz Request de Express para incluir los datos del usuario
-declare module 'express' {
-  interface Request {
-    user?: {
-      id: string
-      email: string
-      role: UserRole
-    }
-  }
-}
 
 // Obtener la clave secreta de las variables de entorno
 const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'secret'

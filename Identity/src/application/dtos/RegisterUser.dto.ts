@@ -1,5 +1,10 @@
 import { Role } from '../../domain/types/Role'
 import { User } from '../../domain/entities/User'
+import { IRegistrationStrategy } from '../ports/IRegistrationStrategy'
+import { UserResponse } from './UserResponse.dto'
+
+// Re-export for convenience
+export { UserResponse }
 
 // ----------------------------------------------------
 // DTOs de Request (Usados por el Controller, validados por Zod)
@@ -18,3 +23,6 @@ export interface RegisterUserRequest {
   phone?: string
   role: Role
 }
+
+// Alias for RegistrationStrategy (for backwards compatibility)
+export type RegistrationStrategy = IRegistrationStrategy

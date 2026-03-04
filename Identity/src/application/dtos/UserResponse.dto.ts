@@ -11,7 +11,7 @@ export interface UserResponse {
   /**
    * ID único del usuario.
    */
-  id: number
+  id: string
 
   /**
    * Correo electrónico del usuario.

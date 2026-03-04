@@ -1,53 +1,60 @@
 // src/infrastructure/http/controllers/AuthController.ts
 
+import { injectable, container } from 'tsyringe'
 import { Request, Response } from 'express'
-import { injectable, inject } from 'tsyringe'
+import path from 'path'
 import { logger } from '../../../shared/utils/logger'
 import { DomainError, UserNotFoundError } from '../../../domain/errors/DomainError'
 import { LoginRequest } from '../../../application/dtos/LoginDTOs'
-import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 import { RegisterUserUseCase } from '../../../application/use-case/auth/RegisterUserUseCase'
 import { LoginUseCase } from '../../../application/use-case/auth/LoginUseCase'
 import { RegisterUserRequest } from '../../../application/dtos/RegisterUser.dto'
+import { Role } from '../../../domain/types/Role'
+import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
+import { userRegisterSchema } from '../validation/zod-schemas/register-schema'
+import { ZodError } from 'zod'
 
 /**
  * @class AuthController
  * @description Adaptador de presentación que gestiona las peticiones HTTP
  * para autenticación y registro. Mapea la entrada/salida HTTP a los Use Cases.
- * * @author Petpay Architecture Team
+ * @author Petpay Architecture Team
  * @version 1.0
  */
 @injectable()
 export class AuthController {
-  constructor (
-    @inject(INJECTION_TOKENS.REGISTER_USE_CASE)
+  constructor(
     private readonly registerUseCase: RegisterUserUseCase,
-
-    @inject(INJECTION_TOKENS.LOGIN_USE_CASE)
     private readonly loginUseCase: LoginUseCase
-
-    // @inject(INJECTION_TOKENS.VERIFY_EMAIL_USE_CASE)
-    // private readonly verifyEmailUseCase: VerifyEmailUseCase, // Pendiente de implementar
-  ) {}
+  ) { }
 
   /**
-   * Endpoint POST /register/:role
-   * Registra un nuevo usuario para un rol específico.
-   * @param {Request} req - Contiene el cuerpo validado y el rol en los parámetros.
+   * Endpoint POST /register
+   * Registra un nuevo usuario con rol por defecto (USER).
+   * @param {Request} req - Contiene el cuerpo a validar.
    */
-  registerByRole = async (req: Request, res: Response): Promise<Response> => {
-    const { role } = req.params
-
-    // Los DTOs se asumen válidos gracias al validation.middleware
-    const requestData: RegisterUserRequest = req.body
-
+  register = async (req: Request, res: Response): Promise<Response> => {
     try {
-      logger.info('Registration attempt started', { email: requestData.email, role })
+      // Validar y transformar el request body (divide fullName en firstName y lastName)
+      const validatedData = userRegisterSchema.parse(req.body)
+
+      const requestData: RegisterUserRequest = {
+        email: validatedData.email,
+        password: validatedData.password,
+        firstName: validatedData.firstName!,
+        lastName: validatedData.lastName!,
+        role: Role.CLIENT
+      }
+
+      if (validatedData.phone) {
+        requestData.phone = validatedData.phone
+      }
+
+      logger.info('Registration attempt started', { email: requestData.email, role: 'USER' })
 
       const result = await this.registerUseCase.execute({
         ...requestData,
-        // Usamos el rol de la URL para sobreescribir el rol en el DTO (si existe)
-        role: role!.toUpperCase() as RegisterUserRequest['role']
+        role: Role.CLIENT // Default role
       })
 
       return res.status(201).json({
@@ -56,6 +63,19 @@ export class AuthController {
         data: result
       })
     } catch (error) {
+      // Manejo de errores de validación Zod
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          status: 400,
+          error: 'Validation Error',
+          message: 'One or more fields are invalid.',
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        })
+      }
+
       // Mapeo de errores de Dominio a HTTP
       if (error instanceof DomainError) {
         return res.status(error.suggestedHttpCode).json({
@@ -65,7 +85,78 @@ export class AuthController {
         })
       }
 
-      logger.error('Unexpected error during registration', { error })
+      // Enhanced error logging for debugging
+      logger.error('Unexpected error during registration', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        email: (error as any)?.email || 'unknown'
+      })
+      return res.status(500).json({ status: 500, message: 'Internal Server Error' })
+    }
+  }
+
+  /**
+   * Endpoint POST /register/:role
+   * Registra un nuevo usuario para un rol específico.
+   * @param {Request} req - Contiene el cuerpo a validar y el rol en los parámetros.
+   */
+  registerByRole = async (req: Request, res: Response): Promise<Response> => {
+    const { role } = req.params
+
+    try {
+      // Validar y transformar el request body
+      const validatedData = userRegisterSchema.parse(req.body)
+
+      const requestData: RegisterUserRequest = {
+        email: validatedData.email,
+        password: validatedData.password,
+        firstName: validatedData.firstName!,
+        lastName: validatedData.lastName!,
+        role: (role?.toUpperCase() || 'CLIENT') as RegisterUserRequest['role']
+      }
+
+      if (validatedData.phone) {
+        requestData.phone = validatedData.phone
+      }
+
+      logger.info('Registration attempt started', { email: requestData.email, role })
+
+      const result = await this.registerUseCase.execute(requestData)
+
+      return res.status(201).json({
+        status: 201,
+        message: 'User registered successfully. Verification email sent.',
+        data: result
+      })
+    } catch (error) {
+      // Manejo de errores de validación Zod
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          status: 400,
+          error: 'Validation Error',
+          message: 'One or more fields are invalid.',
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        })
+      }
+
+      // Mapeo de errores de Dominio a HTTP
+      if (error instanceof DomainError) {
+        return res.status(error.suggestedHttpCode).json({
+          status: error.suggestedHttpCode,
+          message: error.message,
+          error: error.name
+        })
+      }
+
+      // Enhanced error logging for debugging
+      logger.error('Unexpected error during registration', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        email: (error as any)?.email || 'unknown'
+      })
       return res.status(500).json({ status: 500, message: 'Internal Server Error' })
     }
   }
@@ -73,7 +164,7 @@ export class AuthController {
   /**
    * Endpoint POST /login
    * Autentica un usuario.
-   * @param {Request} req - Contiene las credenciales validadas.
+   * @param {Request} req - Contiene las credenciales a validar.
    */
   login = async (req: Request, res: Response): Promise<Response> => {
     const requestData: LoginRequest = req.body
@@ -96,22 +187,19 @@ export class AuthController {
         maxAge: 8640000000 // 24 horas
       })
 
-      // 2. Retornar Respuesta (sin el accessToken en el cuerpo por seguridad)
+      // 2. Retornar Respuesta
       return res.status(200).json({
         status: 200,
         message: 'Login successful',
         data: {
           user: result.user
-          // refreshToken: result.refreshToken, // El refresh token puede ir en el cuerpo o en otra cookie
         }
       })
     } catch (error) {
       if (error instanceof UserNotFoundError) {
-        // Usamos 401 para 'Invalid credentials' por seguridad.
         return res.status(401).json({ status: 401, message: 'Invalid credentials' })
       }
       if (error instanceof DomainError) {
-        // Captura errores como 'Account is not verified' o 'Invalid credentials'
         return res.status(error.suggestedHttpCode).json({
           status: error.suggestedHttpCode,
           message: error.message
@@ -123,20 +211,65 @@ export class AuthController {
     }
   }
 
-  // TO DO: Refactorizar listUsers, verifyEmail
-  // ... (otros métodos como listUsers y verifyEmail, siguiendo el mismo patrón)
+  /**
+   * Endpoint GET /users
+   * Obtiene la lista de usuarios (Admin only).
+   * @param {Request} req - Contiene el usuario autenticado.
+   */
+  listUsers = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const userRepository = container.resolve<any>(INJECTION_TOKENS.USER_REPOSITORY)
+      const users = await userRepository.findAll()
 
-  verifyEmail = async (req: Request, res: Response) => {
-    const { userId } = req.params
+      return res.status(200).json({
+        status: 200,
+        message: 'Users retrieved successfully',
+        data: users.map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          roles: u.roles,
+          isVerified: u.isVerified
+        }))
+      })
+    } catch (error) {
+      logger.error('Error listing users', { error })
+      return res.status(500).json({ status: 500, message: 'Internal Server Error' })
+    }
+  }
 
-    // Esto requiere un Use Case específico (VerifyEmailUseCase)
-    // const result = await this.verifyEmailUseCase.execute({ userId });
+  /**
+   * Endpoint GET /verify-email/:userId
+   * Verifica el email de un usuario.
+   * @param {Request} req - Contiene el userId en los parámetros.
+   */
+  verifyEmail = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.params
 
-    // Temporalmente, usamos el método render de Express para las vistas EJS
-    // Aseguramos que la vista se busque en la nueva ruta: src/infrastructure/http/views/
-    return res.status(200).render('verifySuccess', {
-      success: true, // Asumiendo éxito temporalmente
-      message: 'Verification successful (To be refactored)'
-    })
+      if (!userId) {
+        res.status(400).send('<h1>ID de usuario inválido</h1>')
+        return
+      }
+
+      const userRepository = container.resolve<any>(INJECTION_TOKENS.USER_REPOSITORY)
+      const user = await userRepository.findById(userId)
+
+      if (!user) {
+        res.status(404).send('<h1>Usuario no encontrado</h1>')
+        return
+      }
+
+      user.markAsVerified()
+      await userRepository.save(user)
+
+      logger.info('Email verified successfully', { userId: user.id, email: user.email })
+
+      res.status(200).render('verifySuccess')
+    } catch (error) {
+      logger.error('Error verifying email', { error })
+      res.status(500).send('<h1>Error al verificar el email.</h1>')
+    }
   }
 }

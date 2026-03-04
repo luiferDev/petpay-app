@@ -13,6 +13,10 @@ export const Role = {
 
 export type Role = typeof Role[keyof typeof Role]
 
+// Alias for backward compatibility
+export const UserRole = Role
+export type UserRole = Role
+
 export const PermissionLevel = {
   READ: 'READ',
   WRITE: 'WRITE',

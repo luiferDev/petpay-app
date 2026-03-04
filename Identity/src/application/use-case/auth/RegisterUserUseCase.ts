@@ -1,3 +1,6 @@
+import 'reflect-metadata'
+import { injectable, inject } from 'tsyringe'
+
 import {
   RegisterUserRequest,
   RegistrationStrategy,
@@ -6,12 +9,13 @@ import {
 import { User, UserProps } from '../../../domain/entities/User'
 import { Role } from '../../../domain/types/Role'
 
-import { IEventPublisher } from '../../ports/IEventPublisher'
+import type { IEventPublisher } from '../../ports/IEventPublisher'
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { ServiceProviderRegisteredEvent } from '../../../domain/events/ServiceProviderRegisteredEvent'
 import { UserAlreadyExistsError } from '../../../domain/errors/DomainError'
 import { UserCreatedEvent } from '../../../domain/events/UserCreatedEvent'
 import { hash } from 'bcrypt'
+import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
 
 // DTOs que se definen en el siguiente paso
 
@@ -24,12 +28,16 @@ import { hash } from 'bcrypt'
  * @author Petpay Architecture Team
  * @version 1.0
  */
+@injectable()
 export class RegisterUserUseCase {
   private readonly SALT_ROUNDS = 12
 
   constructor (
+    @inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @inject(INJECTION_TOKENS.EVENT_PUBLISHER)
     private readonly eventPublisher: IEventPublisher,
+    @inject(INJECTION_TOKENS.REGISTRATION_STRATEGIES)
     private readonly registrationStrategies: Map<string, RegistrationStrategy> // Inyección de estrategias
   ) {}
 
@@ -69,11 +77,15 @@ export class RegisterUserUseCase {
 
     let user = new User(baseProps)
 
-    // 5. Aplicar lógica específica del Template Method (p.ej., asignación de Account)
-    user = await strategy.applySpecifics(user, request)
-
-    // 6. Persistir el Aggregate Root
+    // 5. Persistir el Aggregate Root primero (para obtener el ID)
     const savedUser = await this.userRepository.save(user)
+
+    console.log('[RegisterUserUseCase] User saved successfully:', savedUser.id)
+
+    // 6. Aplicar lógica específica del Template Method (p.ej., asignación de Account)
+    // Ahora el usuario tiene un ID
+    user = await strategy.applySpecifics(savedUser, request)
+
     // 7. Publicar Evento de Dominio (para comunicación asíncrona)
     // Evento genérico UserCreatedEvent (para logging, auditoría, etc.)
     const userCreatedEvent = new UserCreatedEvent({

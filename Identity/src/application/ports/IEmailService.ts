@@ -21,4 +21,17 @@ export interface IEmailService {
     subject: string,
     locals?: Record<string, any>
   ) => Promise<{ success: boolean, messageId?: string, error?: any }>
+
+  /**
+   * Envía un correo de verificación de email.
+   * @param {string} to - Dirección de correo del destinatario.
+   * @param {string} firstName - Nombre del usuario para la plantilla.
+   * @param {string} verificationToken - Token de verificación.
+   * @returns {Promise<{success: boolean, messageId?: string, error?: any}>} Resultado de la operación.
+   */
+  sendVerificationEmail: (
+    to: string,
+    firstName: string,
+    userId: string
+  ) => Promise<{ success: boolean, messageId?: string, error?: any }>
 }

@@ -1,12 +1,15 @@
 import { hash } from 'bcrypt'
+import { injectable, inject } from 'tsyringe'
 import { User } from '../../../domain/entities/User'
 import { Role } from '../../../domain/types/Role'
 import { OAuthProviderError, OAuthInvalidStateError } from '../../../domain/errors/OAuthError'
-import { ITokenProvider } from '../../ports/ITokenService'
+import { ITokenService } from '../../ports/ITokenService'
 import { IOAuthProvider, OAuthUserProfile, OAuthTokens } from '../../ports/IOAuthProvider'
 import { IOAuthUserRepository } from '../../ports/IOAuthUserRepository'
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { OAuthStateManager } from '../../../infrastructure/services/OAuthStateManager'
+import { OAuthProviderFactory } from '../../../infrastructure/services/OAuthProviderFactory'
+import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -44,16 +47,28 @@ export interface OAuthLoginResponse {
  * Maneja el flujo completo: validar state, obtener tokens del proveedor,
  * obtener perfil de usuario, crear/vincular usuario, y generar JWT.
  */
+@injectable()
 export class OAuthLoginUseCase {
   private readonly SALT_ROUNDS = 12
 
   constructor (
-    private readonly oauthProvider: IOAuthProvider,
+    @inject(INJECTION_TOKENS.OAUTH_USER_REPOSITORY)
     private readonly oauthUserRepository: IOAuthUserRepository,
+    @inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    private readonly tokenProvider: ITokenProvider,
+    @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
+    private readonly tokenProvider: ITokenService,
+    @inject(INJECTION_TOKENS.OAUTH_STATE_MANAGER)
     private readonly stateManager: OAuthStateManager
   ) {}
+
+  /**
+   * @private
+   * Gets the OAuth provider from the factory based on the provider name.
+   */
+  private getOAuthProvider (providerName: 'google' | 'github'): IOAuthProvider {
+    return OAuthProviderFactory.getProvider(providerName)
+  }
 
   /**
    * Ejecuta el caso de uso de login OAuth.
@@ -76,6 +91,9 @@ export class OAuthLoginUseCase {
    * @throws {OAuthProviderError} Si el proveedor OAuth falla.
    */
   public async execute (request: OAuthLoginRequest): Promise<OAuthLoginResponse> {
+    // Get the OAuth provider from the factory based on request
+    const oauthProvider = this.getOAuthProvider(request.provider)
+
     // 1. Validate state using OAuthStateManager
     const validationResult = this.stateManager.validateState(request.state, request.cookieState || '')
 
@@ -91,10 +109,10 @@ export class OAuthLoginUseCase {
     // 3. Exchange code for tokens
     let tokens: OAuthTokens
     try {
-      tokens = await this.oauthProvider.exchangeCodeForTokens(request.code)
+      tokens = await oauthProvider.exchangeCodeForTokens(request.code)
     } catch (error) {
       throw new OAuthProviderError(
-        this.oauthProvider.providerName,
+        oauthProvider.providerName,
         `Failed to exchange code for tokens: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
@@ -102,10 +120,10 @@ export class OAuthLoginUseCase {
     // 3. Get user profile from provider
     let profile: OAuthUserProfile
     try {
-      profile = await this.oauthProvider.getUserProfile(tokens.accessToken)
+      profile = await oauthProvider.getUserProfile(tokens.accessToken)
     } catch (error) {
       throw new OAuthProviderError(
-        this.oauthProvider.providerName,
+        oauthProvider.providerName,
         `Failed to get user profile: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
@@ -115,14 +133,14 @@ export class OAuthLoginUseCase {
 
     // 5. Generate JWT tokens
     const jwtTokens = this.tokenProvider.generateTokensForOAuthUser(
-      user.id,
+      user.id!,
       user.email,
       user.roles[0] || 'CLIENT'
     )
 
     return {
       user: {
-        id: user.id,
+        id: user.id!,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -188,8 +206,8 @@ export class OAuthLoginUseCase {
     const newUser = new User({
       email: profile.email,
       passwordHash,
-      firstName: profile.displayName?.split(' ')[0] || profile.email.split('@')[0],
-      lastName: profile.displayName?.split(' ').slice(1).join(' ') || '',
+      firstName: profile.displayName?.split(' ')[0] ?? profile.email.split('@')[0] ?? 'User',
+      lastName: profile.displayName?.split(' ').slice(1).join(' ') ?? '',
       roles: ['CLIENT'],
       isVerified: true // Email verified by OAuth provider
     })

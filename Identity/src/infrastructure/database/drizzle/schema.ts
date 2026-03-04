@@ -31,7 +31,7 @@ export const oauthProviderEnum = pgEnum('oauth_provider', ['google', 'github'])
  */
 export const users = pgTable('users', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
@@ -39,9 +39,7 @@ export const users = pgTable('users', {
   isVerified: boolean('is_verified').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-}, (table) => ({
-  emailIndex: unique('users_email_unique').on(table.email) // Índice único para el email
-}))
+})
 
 /**
  * @description Tabla para manejar la multi-tenancy y agrupación de usuarios (ej. familia).

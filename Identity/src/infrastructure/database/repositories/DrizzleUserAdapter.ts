@@ -1,31 +1,34 @@
-// src/infrastructure/database/repositories/DrizzleUserRepository.ts
+// src/infrastructure/database/repositories/DrizzleUserAdapter.ts
 
-import { DbClient, getDb } from '../drizzle/client'
+import { inject } from 'tsyringe'
+import { type DbClient } from '../drizzle/client'
 import { accountUsers, accounts, roleEnum, userRoles, users } from '../drizzle/schema'
 
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { User } from '../../../domain/entities/User'
 import { UserNotFoundError } from '../../../domain/errors/DomainError'
 import { eq } from 'drizzle-orm'
-import { injectable } from 'tsyringe'
+import { injectable, singleton } from 'tsyringe'
+import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 
 /**
- * @class DrizzleUserRepository
+ * @class DrizzleUserAdapter
  * @description Adaptador que implementa el contrato IUserRepository (Port)
  * utilizando Drizzle ORM y PostgreSQL (Adapter).
  * Es responsable de mapear Entidades de Dominio a DTOs de Drizzle y viceversa.
- * * @author Petpay Architecture Team
+ * @author Petpay Architecture Team
  * @version 1.0
  */
 @injectable()
-export class DrizzleUserRepository implements IUserRepository {
+@singleton()
+export class DrizzleUserAdapter implements IUserRepository {
   private readonly db: DbClient
 
   /**
    * @constructor
-   * @param {DbClient} [db] - Cliente Drizzle inyectado (se usa getDb si no se inyecta para DI simple).
+   * @param {DbClient} db - Cliente Drizzle inyectado por el contenedor DI.
    */
-  constructor (db: DbClient = getDb()) {
+  constructor (@inject(INJECTION_TOKENS.DB_CLIENT) db: DbClient) {
     this.db = db
   }
 
@@ -88,22 +91,21 @@ export class DrizzleUserRepository implements IUserRepository {
         if (newUser == null) throw new Error('Failed to create user')
         savedUser = newUser
 
-        // 1.1. Lógica de Account (Ejemplo para nuevo usuario)
-        // Se asume que todo nuevo usuario necesita una Account para la multitenancy.
-        const [newAccount] = await tx.insert(accounts)
-          .values({
-            accountName: `${savedUser.firstName}'s Account`,
-            type: 'INDIVIDUAL' // Valor por defecto
-          })
-          .returning()
-        if (newAccount == null) throw new Error('Failed to create account')
+        // 1.1. Account creation temporarily disabled - handled by registration strategy
+        // const [newAccount] = await tx.insert(accounts)
+        //   .values({
+        //     accountName: `${savedUser.firstName} ${savedUser.lastName} Account`,
+        //     type: 'INDIVIDUAL'
+        //   })
+        //   .returning()
+        // if (newAccount == null) throw new Error('Failed to create account')
 
-        // 1.2. Vincular User con Account
-        await tx.insert(accountUsers).values({
-          accountId: newAccount.id,
-          userId: savedUser.id,
-          permissionLevel: 'OWNER' // El creador es el dueño de la cuenta
-        })
+        // 1.2. Link User with Account (disabled)
+        // await tx.insert(accountUsers).values({
+        //   accountId: newAccount.id,
+        //   userId: savedUser.id,
+        //   permissionLevel: 'OWNER'
+        // })
       } else {
         // Actualizar usuario existente
         const [updatedUser] = await tx.update(users)
@@ -146,17 +148,56 @@ export class DrizzleUserRepository implements IUserRepository {
   /**
    * {@inheritDoc}
    */
-  public async findById (id: string): Promise<User | null> {
-    const dbUser = await this.getUserWithRoles(id)
+  public async findByEmail (email: string): Promise<User | null> {
+    const dbUser = await this.getUserWithRoles(email)
     return (dbUser != null) ? this.mapToDomain(dbUser) : null
   }
 
   /**
    * {@inheritDoc}
    */
-  public async findByEmail (email: string): Promise<User | null> {
-    const dbUser = await this.getUserWithRoles(email)
+  public async findById (id: string): Promise<User | null> {
+    const dbUser = await this.getUserWithRoles(id)
     return (dbUser != null) ? this.mapToDomain(dbUser) : null
+  }
+
+  /**
+   * Función para obtener el usuario y sus roles de forma eficiente.
+   */
+  private async getUserWithRoles (identifier: string): Promise<(typeof users.$inferSelect & { roles: string[] }) | undefined> {
+    console.log('[DrizzleUserAdapter] getUserWithRoles called with:', identifier)
+    
+    // Check if it looks like an email (contains @)
+    const isEmail = identifier.includes('@')
+    
+    let dbUser
+    if (isEmail) {
+      console.log('[DrizzleUserAdapter] Searching by email:', identifier.toLowerCase())
+      const [user] = await this.db.select().from(users).where(eq(users.email, identifier.toLowerCase())).limit(1)
+      dbUser = user
+    } else {
+      // Search by ID
+      console.log('[DrizzleUserAdapter] Searching by ID:', identifier)
+      const [user] = await this.db.select().from(users).where(eq(users.id, identifier)).limit(1)
+      dbUser = user
+    }
+
+    console.log('[DrizzleUserAdapter] DB User found:', dbUser?.email)
+
+    if (dbUser == null) return undefined
+
+    // 2. Obtener roles asociados
+    const userRolesResult = await this.db.select({ role: userRoles.role })
+      .from(userRoles)
+      .where(eq(userRoles.userId, dbUser.id))
+
+    // 3. Combinar y retornar
+    const roles = userRolesResult.map(r => r.role)
+
+    return {
+      ...dbUser,
+      roles
+    }
   }
 
   /**
@@ -179,31 +220,25 @@ export class DrizzleUserRepository implements IUserRepository {
     // Drizzle se encarga de las eliminaciones en cascada para userRoles y accountUsers
   }
 
-  // --- Helpers ---
-
   /**
-   * @private
-   * Función para obtener el usuario y sus roles de forma eficiente.
+   * Get all users with their roles
    */
-  private async getUserWithRoles (identifier: string): Promise<(typeof users.$inferSelect & { roles: string[] }) | undefined> {
-    // El ID es now siempre un string (UUID)
-    const userQuery = eq(users.id, identifier)
-
-    const [dbUser] = await this.db.select().from(users).where(userQuery).limit(1)
-
-    if (dbUser == null) return undefined
-
-    // 2. Obtener roles asociados
-    const userRolesResult = await this.db.select({ role: userRoles.role })
-      .from(userRoles)
-      .where(eq(userRoles.userId, dbUser.id))
-
-    // 3. Combinar y retornar
-    const roles = userRolesResult.map(r => r.role)
-
-    return {
-      ...dbUser,
-      roles
-    }
+  public async findAll (): Promise<User[]> {
+    const allUsers = await this.db.select().from(users)
+    
+    const usersWithRoles = await Promise.all(
+      allUsers.map(async (user) => {
+        const userRolesResult = await this.db.select({ role: userRoles.role })
+          .from(userRoles)
+          .where(eq(userRoles.userId, user.id))
+        
+        return {
+          ...user,
+          roles: userRolesResult.map(r => r.role)
+        }
+      })
+    )
+    
+    return usersWithRoles.map(u => this.mapToDomain(u))
   }
 }

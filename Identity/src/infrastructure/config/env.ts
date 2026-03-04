@@ -1,5 +1,5 @@
 // src/infrastructure/config/env.ts
-
+import 'dotenv/config'
 import { z } from 'zod'
 
 /**
@@ -48,6 +48,9 @@ const envSchema = z.object({
 
   /** Contraseña de Nodemailer/SMTP */
   EMAIL_PASSWORD: z.string().optional(),
+
+  /** URL del frontend para links de verificación */
+  FRONTEND_URL: z.string().url().optional().default('http://localhost:3000'),
 
   // --- CONFIGURACIÓN DE OAUTH ---
 
@@ -124,9 +127,9 @@ export function isOAuthEnabled (): boolean {
     return false
   }
 
-  const hasGoogle = Config.GOOGLE_CLIENT_ID && Config.GOOGLE_CLIENT_SECRET && Config.GOOGLE_CALLBACK_URL
-  const hasGitHub = Config.GITHUB_CLIENT_ID && Config.GITHUB_CLIENT_SECRET && Config.GITHUB_CALLBACK_URL
-  const hasStateSecret = Config.OAUTH_STATE_SECRET.length >= 32
+  const hasGoogle = !!(Config.GOOGLE_CLIENT_ID && Config.GOOGLE_CLIENT_SECRET && Config.GOOGLE_CALLBACK_URL)
+  const hasGitHub = !!(Config.GITHUB_CLIENT_ID && Config.GITHUB_CLIENT_SECRET && Config.GITHUB_CALLBACK_URL)
+  const hasStateSecret = !!(Config.OAUTH_STATE_SECRET && Config.OAUTH_STATE_SECRET.length >= 32)
 
   return (hasGoogle || hasGitHub) && hasStateSecret
 }

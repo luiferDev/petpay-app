@@ -1,8 +1,10 @@
-import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
+import { SignOptions, VerifyOptions } from 'jsonwebtoken'
 import { User } from '../../domain/entities/User'
 import { Role } from '../../domain/types/Role'
-import { ITokenProvider } from '../../application/ports/ITokenService'
+import { ITokenService } from '../../application/ports/ITokenService'
 import { Config } from '../config/env'
+import { injectable, singleton } from 'tsyringe'
 
 export const TOKENS = {
   Database: Symbol('Database'),
@@ -14,7 +16,9 @@ export const TOKENS = {
  * @description Implementación del proveedor de tokens JWT.
  * Maneja la generación y verificación de tokens de acceso y refresh.
  */
-export class JwtTokenProvider implements ITokenProvider {
+@injectable()
+@singleton()
+export class JwtTokenProvider implements ITokenService {
   private readonly jwtSecret: string
   private readonly accessTokenExpiry: string
   private readonly refreshTokenExpiry: string
@@ -79,5 +83,20 @@ export class JwtTokenProvider implements ITokenProvider {
       algorithms: ['HS256']
     }
     return jwt.verify(token, this.jwtSecret, options)
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  generateVerificationToken (userId: string, email: string): string {
+    const payload = {
+      userId,
+      email,
+      type: 'email_verification'
+    }
+
+    return jwt.sign(payload, this.jwtSecret, {
+      expiresIn: '24h' // Token válido por 24 horas
+    } as SignOptions)
   }
 }

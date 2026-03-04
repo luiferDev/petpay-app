@@ -1,8 +1,11 @@
+import { injectable, inject } from 'tsyringe'
 import { OAuthProviderError, OAuthLinkingError, OAuthProviderAlreadyLinkedError, OAuthInvalidStateError } from '../../../domain/errors/OAuthError'
-import { ITokenProvider } from '../../ports/ITokenService'
+import { ITokenService } from '../../ports/ITokenService'
 import { IOAuthProvider, OAuthUserProfile, OAuthTokens } from '../../ports/IOAuthProvider'
 import { IOAuthUserRepository } from '../../ports/IOAuthUserRepository'
 import { OAuthStateManager } from '../../../infrastructure/services/OAuthStateManager'
+import { OAuthProviderFactory } from '../../../infrastructure/services/OAuthProviderFactory'
+import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -33,13 +36,24 @@ export interface LinkOAuthProviderResponse {
  * @description Caso de uso para vincular un proveedor OAuth a un usuario existente.
  * El usuario debe estar autenticado para usar este caso de uso.
  */
+@injectable()
 export class LinkOAuthProviderUseCase {
   constructor (
-    private readonly oauthProvider: IOAuthProvider,
+    @inject(INJECTION_TOKENS.OAUTH_USER_REPOSITORY)
     private readonly oauthUserRepository: IOAuthUserRepository,
-    private readonly tokenProvider: ITokenProvider,
+    @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
+    private readonly tokenProvider: ITokenService,
+    @inject(INJECTION_TOKENS.OAUTH_STATE_MANAGER)
     private readonly stateManager: OAuthStateManager
   ) {}
+
+  /**
+   * @private
+   * Gets the OAuth provider from the factory based on the provider name.
+   */
+  private getOAuthProvider (providerName: 'google' | 'github'): IOAuthProvider {
+    return OAuthProviderFactory.getProvider(providerName)
+  }
 
   /**
    * Ejecuta el caso de uso de vincular proveedor OAuth.
@@ -51,6 +65,9 @@ export class LinkOAuthProviderUseCase {
    * @throws {OAuthProviderAlreadyLinkedError} Si el proveedor ya está vinculado a otro usuario.
    */
   public async execute (request: LinkOAuthProviderRequest): Promise<LinkOAuthProviderResponse> {
+    // Get the OAuth provider from the factory based on request
+    const oauthProvider = this.getOAuthProvider(request.provider)
+
     // 1. Validate state using OAuthStateManager
     const validationResult = this.stateManager.validateState(request.state, request.cookieState || '')
 
@@ -76,10 +93,10 @@ export class LinkOAuthProviderUseCase {
     // 3. Exchange code for tokens
     let tokens: OAuthTokens
     try {
-      tokens = await this.oauthProvider.exchangeCodeForTokens(request.code)
+      tokens = await oauthProvider.exchangeCodeForTokens(request.code)
     } catch (error) {
       throw new OAuthProviderError(
-        this.oauthProvider.providerName,
+        oauthProvider.providerName,
         `Failed to exchange code for tokens: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
@@ -87,10 +104,10 @@ export class LinkOAuthProviderUseCase {
     // 4. Get user profile from provider
     let profile: OAuthUserProfile
     try {
-      profile = await this.oauthProvider.getUserProfile(tokens.accessToken)
+      profile = await oauthProvider.getUserProfile(tokens.accessToken)
     } catch (error) {
       throw new OAuthProviderError(
-        this.oauthProvider.providerName,
+        oauthProvider.providerName,
         `Failed to get user profile: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }

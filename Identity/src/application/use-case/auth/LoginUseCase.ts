@@ -1,9 +1,13 @@
+import 'reflect-metadata'
+import { injectable, inject } from 'tsyringe'
+
 import { DomainError, UserNotFoundError } from '../../../domain/errors/DomainError'
 import { LoginRequest, LoginResponse } from '../../dtos/LoginDTOs' // DTOs que se definen en el siguiente paso
 
-import { ITokenProvider } from '../../ports/ITokenService'
+import { ITokenService } from '../../ports/ITokenService'
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { compare } from 'bcrypt'
+import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
 
 /**
  * @class LoginUseCase
@@ -12,10 +16,13 @@ import { compare } from 'bcrypt'
  * @author Petpay Architecture Team
  * @version 1.0
  */
+@injectable()
 export class LoginUseCase {
   constructor (
+    @inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-    private readonly tokenProvider: ITokenProvider
+    @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
+    private readonly tokenProvider: ITokenService
   ) {}
 
   /**
@@ -28,8 +35,11 @@ export class LoginUseCase {
   public async execute (request: LoginRequest): Promise<LoginResponse> {
     const { email, password } = request
 
+    console.log('[LoginUseCase] Attempting login for:', email)
+
     // 1. Buscar usuario (IUserRepository)
     const user = await this.userRepository.findByEmail(email)
+    console.log('[LoginUseCase] User found:', user?.email, 'isVerified:', user?.isVerified)
 
     if (user == null) {
       // Usamos un error genérico aquí para no revelar si el email existe o no
@@ -38,6 +48,7 @@ export class LoginUseCase {
 
     // 2. Verificar contraseña
     const passwordMatch = await compare(password, user.passwordHash)
+    console.log('[LoginUseCase] Password match:', passwordMatch)
 
     if (!passwordMatch) {
       throw new DomainError('Invalid credentials', 401)
