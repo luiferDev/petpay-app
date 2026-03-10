@@ -1,5 +1,10 @@
-import { Role } from '../../domain/types/Role';
-import { User } from '../../domain/entities/User';
+import { Role } from '../../domain/types/Role'
+import { User } from '../../domain/entities/User'
+import { IRegistrationStrategy } from '../ports/IRegistrationStrategy'
+import { UserResponse } from './UserResponse.dto'
+
+// Re-export for convenience
+export { UserResponse }
 
 // ----------------------------------------------------
 // DTOs de Request (Usados por el Controller, validados por Zod)
@@ -11,10 +16,13 @@ import { User } from '../../domain/entities/User';
  * Contiene todos los campos validados del Request HTTP.
  */
 export interface RegisterUserRequest {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  role: Role;
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  phone?: string
+  role: Role
 }
+
+// Alias for RegistrationStrategy (for backwards compatibility)
+export type RegistrationStrategy = IRegistrationStrategy

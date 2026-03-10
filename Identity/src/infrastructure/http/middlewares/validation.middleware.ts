@@ -1,9 +1,9 @@
 // src/infrastructure/http/middlewares/validation.middleware.ts
 
-import { NextFunction, Request, Response } from 'express';
-import { ZodError, ZodSchema } from 'zod';
+import { NextFunction, Request, Response } from 'express'
+import { ZodError, ZodSchema } from 'zod'
 
-import { logger } from '../../../shared/utils/logger';
+import { logger } from '../../../shared/utils/logger'
 
 /**
  * @function validate
@@ -16,32 +16,31 @@ export const validate = (schema: ZodSchema<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       // 1. Ejecutar la validación
-      schema.parse(req.body);
-      
+      schema.parse(req.body)
+
       // 2. Si es exitoso, continuar
-      next();
+      next()
     } catch (error) {
       // 3. Manejar error de Zod
       if (error instanceof ZodError) {
-        logger.warn('Validation failed on incoming request', { 
-            path: req.path, 
-            details: error.errors 
-        });
-        
-        // Retornar un 400 con los detalles de la validación
+        logger.warn('Validation failed on incoming request', {
+          path: req.path,
+          details: error.issues
+        })
+
         return res.status(400).json({
           status: 400,
           error: 'Validation Error',
           message: 'One or more fields are invalid.',
-          details: error.errors.map(err => ({
+          details: error.issues.map(err => ({
             field: err.path.join('.'),
-            message: err.message,
-          })),
-        });
+            message: err.message
+          }))
+        })
       }
-      
+
       // Si es otro tipo de error, pasarlo al handler global
-      next(error);
+      next(error)
     }
-  };
-};
+  }
+}

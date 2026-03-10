@@ -1,0 +1,36 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Monorepo with 3 microservices - Identity (TypeScript/Bun/Express/Drizzle), Marketplace (Go/Gin/GORM), Catalog & Offers (Go/Gin/GORM)
+  Architecture: Clean Architecture (Identity), Hexagonal Architecture (Go services)
+  Testing: No test infrastructure detected yet
+  Style: ts-standard (Identity), golangci-lint recommended (Go)
+  Database: PostgreSQL for all services
+  CI: GitHub Actions (linting workflow for Identity)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages (Identity, Marketplace, or Catalog)
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Specify which service(s) are affected
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Reference existing AGENTS.md in each service for code patterns
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+    - Specify service directory (Identity/, marketplace/, catalog-&-offers/)
+  apply:
+    - Follow existing code patterns from service-specific AGENTS.md
+    - Load relevant coding skills for the project stack (typescript, zod-4, etc.)
+  verify:
+    - Run linter: bun run lint (Identity), golangci-lint run (Go)
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)

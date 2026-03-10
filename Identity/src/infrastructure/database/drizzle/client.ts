@@ -11,7 +11,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
  * @typedef {ReturnType<typeof makeDatabaseClient>} DbClient
  * @description Alias de tipo para el cliente Drizzle con el esquema inyectado.
  */
-export type DbClient = ReturnType<typeof makeDatabaseClient>;
+export type DbClient = ReturnType<typeof makeDatabaseClient>
 
 /**
  * @function makeDatabaseClient
@@ -19,26 +19,26 @@ export type DbClient = ReturnType<typeof makeDatabaseClient>;
  * Utiliza un Pool de conexiones (pg) para manejo eficiente de recursos.
  * @returns Cliente Drizzle ORM.
  */
-export function makeDatabaseClient() {
+export function makeDatabaseClient () {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) {
     // ⚠️ CONSIDERACIÓN DE SEGURIDAD: Nunca exponer la cadena de conexión real.
-    throw new Error("DATABASE_URL environment variable is not set")
+    throw new Error('DATABASE_URL environment variable is not set')
   }
 
   const pool = new Pool({
-    connectionString: connectionString,
+    connectionString,
     max: 20, // Pool size definido en consideraciones de performance
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 2000
   })
 
   // Retorna el cliente Drizzle con el esquema cargado
   return drizzle(pool, { schema, logger: process.env.NODE_ENV === 'development' })
 }
 
-let dbInstance: DbClient | null = null;
-let poolInstance: Pool | null = null;
+let dbInstance: DbClient | null = null
+let poolInstance: Pool | null = null
 
 /**
  * @function getDb
@@ -49,7 +49,7 @@ export const getDb = (): DbClient => {
   if (dbInstance === null) {
     const connectionString = process.env.DATABASE_URL
     if (!connectionString) {
-      throw new Error("DATABASE_URL environment variable is not set in getDb")
+      throw new Error('DATABASE_URL environment variable is not set in getDb')
     }
 
     poolInstance = new Pool({ connectionString })

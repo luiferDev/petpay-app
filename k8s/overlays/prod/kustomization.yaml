@@ -1,0 +1,87 @@
+# Kustomization for production environment
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: petpay-prod
+
+# Base configuration
+resources:
+  - ../../base
+
+# Environment-specific name suffix
+namePrefix: prod-
+
+# Environment-specific labels
+commonLabels:
+  env: production
+
+# Patch replicas for production (high availability)
+replicas:
+  - name: prod-identity
+    count: 3
+  - name: prod-marketplace
+    count: 3
+  - name: prod-catalog
+    count: 3
+  - name: prod-postgres
+    count: 1
+
+# Environment-specific config
+configMapGenerator:
+  - name: identity-config
+    behavior: replace
+    literals:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+  - name: marketplace-config
+    behavior: replace
+    literals:
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+  - name: catalog-config
+    behavior: replace
+    literals:
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+
+# Image tags for production
+images:
+  - name: petpay/identity
+    newTag: v1.0.0
+  - name: petpay/marketplace
+    newTag: v1.0.0
+  - name: petpay/catalog
+    newTag: v1.0.0
+
+# Increase resources limits for production
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      labelSelector: app=identity
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      labelSelector: app=marketplace
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      labelSelector: app=catalog

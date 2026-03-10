@@ -1,7 +1,7 @@
 // src/application/ports/IRegistrationStrategy.ts
 
-import { RegisterUserRequest } from '../dtos/RegisterUser.dto';
-import { User } from '../../domain/entities/User';
+import { RegisterUserRequest } from '../dtos/RegisterUser.dto'
+import { User } from '../../domain/entities/User'
 
 /**
  * @interface IRegistrationStrategy
@@ -11,11 +11,11 @@ import { User } from '../../domain/entities/User';
  * * Este Port reemplaza al patrón Template Method, externalizando la abstracción.
  */
 export interface IRegistrationStrategy {
-    /**
+  /**
      * Aplica la lógica de negocio específica para un rol dentro de una transacción.
      * @param {User} user - La entidad User base.
      * @param {RegisterUserRequest} request - El request original.
      * @returns {Promise<User>} La entidad User potencialmente modificada o enriquecida.
      */
-    applySpecifics(user: User, request: RegisterUserRequest): Promise<User>;
+  applySpecifics: (user: User, request: RegisterUserRequest) => Promise<User>
 }

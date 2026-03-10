@@ -1,0 +1,149 @@
+# API Gateway - Ingress con seguridad para desarrollo
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: petpay-ingress
+  namespace: petpay
+  labels:
+    app.kubernetes.io/name: petpay-ingress
+    app.kubernetes.io/part-of: petpay-app
+  annotations:
+    # Rate Limiting
+    nginx.ingress.kubernetes.io/limit-rate: "100k"
+    nginx.ingress.kubernetes.io/limit-rate-after: "5m"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:3000,http://localhost:3001,https://petpay.local,https://petpay.dev"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length,Content-Range"
+    
+    # Proxy settings
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    
+    # Security - hide server version
+    nginx.ingress.kubernetes.io/server-snippet: |
+      server_tokens off;
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+spec:
+  ingressClassName: nginx
+  rules:
+    # Default rule - matches any host (for local development)
+    - http:
+        paths:
+          # API Gateway root - health check
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          
+          # Identity Service routes
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          
+          # Marketplace Service routes
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace
+                port:
+                  number: 8080
+          
+          - path: /api/v1/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace
+                port:
+                  number: 8080
+          
+          # Catalog Service routes
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+          
+          - path: /api/v1/categories
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+          
+          - path: /api/v1/services
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081
+    # Fallback rule with petpay.local host
+    - host: petpay.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: identity
+                port:
+                  number: 3000
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace
+                port:
+                  number: 8080
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081

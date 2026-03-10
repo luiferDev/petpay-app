@@ -1,4 +1,4 @@
-import { Role } from '../../domain/types/Role';
+import { Role } from '../../domain/types/Role'
 
 /**
  * @interface UserResponse
@@ -11,27 +11,27 @@ export interface UserResponse {
   /**
    * ID único del usuario.
    */
-  id: number;
-  
+  id: string
+
   /**
    * Correo electrónico del usuario.
    */
-  email: string;
-  
+  email: string
+
   /**
    * Nombre completo concatenado (para display en UI).
    */
-  fullName: string;
-  
+  fullName: string
+
   /**
    * Lista de roles asignados.
    */
-  roles: Role[];
-  
+  roles: Role[]
+
   /**
    * Estado de verificación de la cuenta.
    */
-  isVerified: boolean;
-  
+  isVerified: boolean
+
   // Se pueden agregar otros campos públicos si son necesarios, ej. phone, avatarUrl.
 }

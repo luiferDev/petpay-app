@@ -10,7 +10,8 @@ import {
   serial,
   timestamp,
   unique,
-  varchar
+  varchar,
+  text
 } from 'drizzle-orm/pg-core'
 
 import { relations } from 'drizzle-orm'
@@ -20,6 +21,7 @@ import { relations } from 'drizzle-orm'
 export const accountTypeEnum = pgEnum('account_type', ['INDIVIDUAL', 'FAMILY', 'BUSINESS'])
 export const roleEnum = pgEnum('role', ['CLIENT', 'SERVICE_PROVIDER', 'ADMIN'])
 export const permissionLevelEnum = pgEnum('permission_level', ['READ', 'WRITE', 'ADMIN', 'OWNER'])
+export const oauthProviderEnum = pgEnum('oauth_provider', ['google', 'github'])
 
 // -------------------- TABLAS --------------------
 
@@ -29,7 +31,7 @@ export const permissionLevelEnum = pgEnum('permission_level', ['READ', 'WRITE', 
  */
 export const users = pgTable('users', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
@@ -37,9 +39,7 @@ export const users = pgTable('users', {
   isVerified: boolean('is_verified').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-}, (table) => ({
-  emailIndex: unique('users_email_unique').on(table.email) // Índice único para el email
-}))
+})
 
 /**
  * @description Tabla para manejar la multi-tenancy y agrupación de usuarios (ej. familia).
@@ -84,11 +84,33 @@ export const accountUsers = pgTable('account_users', {
   uniqueConstraint: unique('account_user_unique').on(table.accountId, table.userId)
 }))
 
+/**
+ * @description Tabla para almacenar proveedores OAuth asociados a usuarios.
+ * Permite que un usuario tenga múltiples proveedores (Google, GitHub).
+ */
+export const userOAuthProviders = pgTable('user_oauth_providers', {
+  id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  provider: oauthProviderEnum('provider').notNull(),
+  providerUserId: varchar('provider_user_id', { length: 255 }).notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  userProviderUnique: unique('user_provider_unique').on(table.userId, table.provider),
+  providerUserUnique: unique('oauth_provider_user_unique').on(table.provider, table.providerUserId)
+}))
+
 // -------------------- RELACIONES (Relations) --------------------
 // Drizzle Relations para facilitar consultas con joins
 export const userRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
-  accountUsers: many(accountUsers)
+  accountUsers: many(accountUsers),
+  oauthProviders: many(userOAuthProviders)
   // Las direcciones (addresses) se han omitido temporalmente para reducir la complejidad del Aggregate
   // Pero deberían ser añadidas si se consideran parte del Aggregate Root de User.
 }))
@@ -105,5 +127,12 @@ export const accountUserRelations = relations(accountUsers, ({ one }) => ({
   account: one(accounts, {
     fields: [accountUsers.accountId],
     references: [accounts.id]
+  })
+}))
+
+export const userOAuthProviderRelations = relations(userOAuthProviders, ({ one }) => ({
+  user: one(users, {
+    fields: [userOAuthProviders.userId],
+    references: [users.id]
   })
 }))

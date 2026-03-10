@@ -4,10 +4,24 @@
  * Este es un Value Object inmutable que define las capacidades esenciales del usuario.
  * * Basado en: Diagframa UML new Entity Petcat.docx
  */
-export type Role = 'CLIENT' | 'SERVICE_PROVIDER' | 'ADMIN';
 
-/**
- * Nivel de permiso, aunque la lógica principal de roles es en User,
- * esta enum puede ser usada para AccountUser (entidad relacionada).
- */
-export type PermissionLevel = 'READ' | 'WRITE' | 'ADMIN' | 'OWNER';
+export const Role = {
+  CLIENT: 'CLIENT',
+  SERVICE_PROVIDER: 'SERVICE_PROVIDER',
+  ADMIN: 'ADMIN'
+} as const
+
+export type Role = typeof Role[keyof typeof Role]
+
+// Alias for backward compatibility
+export const UserRole = Role
+export type UserRole = Role
+
+export const PermissionLevel = {
+  READ: 'READ',
+  WRITE: 'WRITE',
+  ADMIN: 'ADMIN',
+  OWNER: 'OWNER'
+} as const
+
+export type PermissionLevel = typeof PermissionLevel[keyof typeof PermissionLevel]

@@ -1,45 +1,31 @@
-import { User } from '../entities/User';
-
 /**
- * @interface IUserRepository
- * @description Port (interfaz) para operaciones de persistencia del Aggregate Root User.
- * Define el contrato de persistencia (CRUD) requerido por la capa de Aplicación.
- * * ⚠️ Principio: Un Repository solo debe manejar un Aggregate Root.
- * Las transacciones de registro/login son responsabilidad de los Use Cases.
+ * @class IUserRepository
+ * @description Contrato abstracto para el repositorio de usuarios.
+ * Se define como clase abstracta para asegurar que Bun/TypeScript generen un token real en runtime.
  */
-export interface IUserRepository {
+export abstract class IUserRepository {
   /**
-   * Guarda o actualiza una entidad User.
-   * @param {User} user - Usuario a persistir (contiene la lógica de persistencia de Account también si aplica el Aggregate).
-   * @returns {Promise<User>} El usuario persistido.
+   * Persiste un usuario en la base de datos.
    */
-  save(user: User): Promise<User>;
-  
+  abstract save(user: any): Promise<any>;
+
   /**
-   * Busca un usuario por ID.
-   * @param {number} id - ID del usuario.
-   * @returns {Promise<User | null>} Usuario encontrado o null.
+   * Busca un usuario por su ID único.
    */
-  findById(id: number): Promise<User | null>;
-  
+  abstract findById(id: string): Promise<any | null>;
+
   /**
-   * Busca un usuario por su dirección de correo electrónico.
-   * @param {string} email - Correo electrónico del usuario.
-   * @returns {Promise<User | null>} Usuario encontrado o null.
+   * Busca un usuario por su correo electrónico.
    */
-  findByEmail(email: string): Promise<User | null>;
-  
+  abstract findByEmail(email: string): Promise<any | null>;
+
   /**
-   * Verifica si existe un usuario con el correo electrónico dado.
-   * @param {string} email - Correo electrónico a verificar.
-   * @returns {Promise<boolean>} True si existe un usuario con ese email.
+   * Verifica si un email ya está registrado.
    */
-  existsByEmail(email: string): Promise<boolean>;
-  
+  abstract existsByEmail(email: string): Promise<boolean>;
+
   /**
-   * Elimina un usuario por ID.
-   * @param {number} id - ID del usuario a eliminar.
+   * Elimina un usuario por su ID.
    */
-  deleteById(id: number): Promise<void>;
-  
+  abstract deleteById(id: string): Promise<void>;
 }
