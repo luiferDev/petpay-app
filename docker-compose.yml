@@ -73,6 +73,53 @@ services:
       - petpay-network
     restart: unless-stopped
 
+  # Bookings Service
+  bookings:
+    build:
+      context: ./bookings-service
+      dockerfile: Dockerfile
+    container_name: petpay-bookings
+    ports:
+      - "8082:8082"
+    environment:
+      - GIN_MODE=release
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay
+      - DB_PORT=5432
+      - PORT=8082
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - petpay-network
+    restart: unless-stopped
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: petpay-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - petpay-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
@@ -125,6 +172,7 @@ services:
       - identity
       - marketplace
       - catalog
+      - bookings
     networks:
       - petpay-network
     restart: unless-stopped
@@ -136,3 +184,4 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  rabbitmq-data:
