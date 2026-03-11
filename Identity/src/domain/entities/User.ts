@@ -65,7 +65,7 @@ export class User {
    * @throws {Error} Si alguna invariante falla.
    */
   private validateInvariants (): void {
-    if (!this.email || !this.email.includes('@')) {
+    if (this.email === '' || !this.email?.includes('@')) {
       throw new Error('User must have a valid email address (Invariant failed)')
     }
     if (this.passwordHash.length < 60) {

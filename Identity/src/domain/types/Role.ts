@@ -11,11 +11,11 @@ export const Role = {
   ADMIN: 'ADMIN'
 } as const
 
-export type Role = typeof Role[keyof typeof Role]
+export type RoleType = typeof Role[keyof typeof Role]
 
 // Alias for backward compatibility
 export const UserRole = Role
-export type UserRole = Role
+export type UserRoleType = Role
 
 export const PermissionLevel = {
   READ: 'READ',
@@ -24,4 +24,4 @@ export const PermissionLevel = {
   OWNER: 'OWNER'
 } as const
 
-export type PermissionLevel = typeof PermissionLevel[keyof typeof PermissionLevel]
+export type PermissionLevelType = typeof PermissionLevel[keyof typeof PermissionLevel]

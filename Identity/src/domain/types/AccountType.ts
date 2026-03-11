@@ -4,4 +4,4 @@ export const AccountType = {
   FAMILY: 'FAMILY'
 } as const
 
-export type AccountType = (typeof AccountType)[keyof typeof AccountType]
+export type AccountTypeType = (typeof AccountType)[keyof typeof AccountType]

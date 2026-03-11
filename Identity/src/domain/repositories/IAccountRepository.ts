@@ -1,7 +1,5 @@
 // src/domain/repositories/IAccountRepository.ts
 
-import { PermissionLevel } from '../types/Role'
-import { User } from '../entities/User'
 import type { AccountType } from '../types/AccountType'
 
 /**
@@ -25,9 +23,9 @@ export abstract class IAccountRepository {
   /**
    * Crea una nueva cuenta y la asocia al usuario como OWNER.
    */
-  abstract createAccountAndAssignOwner(
+  abstract createAccountAndAssignOwner (
     accountName: string,
     type: AccountType,
     userId: string,
-  ): Promise<Account>;
+  ): Promise<Account>
 }
