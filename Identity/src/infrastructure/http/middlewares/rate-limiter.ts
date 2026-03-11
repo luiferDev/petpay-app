@@ -24,7 +24,7 @@ export function createRateLimiter (options: RateLimiterOptions): RateLimitReques
     message: options.message ?? 'Too many requests from this IP',
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => ipKeyGenerator(req.ip || 'unknown'),
+    keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
     skip: () => !isRateLimitEnabled()
   })
 }

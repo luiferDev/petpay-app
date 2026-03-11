@@ -26,7 +26,7 @@ export class RabbitMQEventPublisher implements IEventPublisher {
   private channel: amqp.Channel | null = null
 
   constructor () {
-    this.initializeConnection()
+    void this.initializeConnection()
   }
 
   /**
@@ -67,7 +67,7 @@ export class RabbitMQEventPublisher implements IEventPublisher {
    * {@inheritDoc}
    */
   public async publish (routingKey: string, event: any): Promise<void> {
-    if (!this.channel) {
+    if (this.channel == null) {
       logger.warn(`Cannot publish event: RabbitMQ channel not initialized. Event: ${routingKey}`)
       return
     }
@@ -103,8 +103,8 @@ export class RabbitMQEventPublisher implements IEventPublisher {
    * Cierra la conexión a RabbitMQ durante el cierre del servidor.
    */
   public async close (): Promise<void> {
-    if (this.connection) {
-      await (this.connection as any).close()
+    if (this.connection != null) {
+      await this.connection.close()
       logger.info('✅ RabbitMQ connection closed.')
     }
   }

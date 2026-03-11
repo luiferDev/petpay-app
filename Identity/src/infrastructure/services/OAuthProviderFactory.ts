@@ -7,6 +7,7 @@ import { isProviderConfigured } from '../config/env'
  * @class OAuthProviderFactory
  * @description Factory para crear instancias de proveedores OAuth.
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class OAuthProviderFactory {
   private static readonly instances: Map<string, IOAuthProvider> = new Map()
 
@@ -38,7 +39,7 @@ export class OAuthProviderFactory {
         instance = new GitHubOAuthProvider()
         break
       default:
-        throw new Error(`Unknown OAuth provider: ${provider}`)
+        throw new Error('Unknown OAuth provider')
     }
 
     // Cache and return

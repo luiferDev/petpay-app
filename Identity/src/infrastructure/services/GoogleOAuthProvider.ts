@@ -18,9 +18,19 @@ export class GoogleOAuthProvider implements IOAuthProvider {
       throw new Error('Google OAuth is not configured')
     }
 
-    this.clientId = Config.GOOGLE_CLIENT_ID!
-    this.clientSecret = Config.GOOGLE_CLIENT_SECRET!
-    this.callbackUrl = Config.GOOGLE_CALLBACK_URL!
+    if (Config.GOOGLE_CLIENT_ID === undefined || Config.GOOGLE_CLIENT_ID === '') {
+      throw new Error('GOOGLE_CLIENT_ID is not configured')
+    }
+    if (Config.GOOGLE_CLIENT_SECRET === undefined || Config.GOOGLE_CLIENT_SECRET === '') {
+      throw new Error('GOOGLE_CLIENT_SECRET is not configured')
+    }
+    if (Config.GOOGLE_CALLBACK_URL === undefined || Config.GOOGLE_CALLBACK_URL === '') {
+      throw new Error('GOOGLE_CALLBACK_URL is not configured')
+    }
+
+    this.clientId = Config.GOOGLE_CLIENT_ID
+    this.clientSecret = Config.GOOGLE_CLIENT_SECRET
+    this.callbackUrl = Config.GOOGLE_CALLBACK_URL
 
     this.client = new OAuth2Client({
       clientId: this.clientId,
@@ -51,14 +61,14 @@ export class GoogleOAuthProvider implements IOAuthProvider {
   async exchangeCodeForTokens (code: string): Promise<OAuthTokens> {
     const { tokens } = await this.client.getToken(code)
 
-    if (!tokens.access_token) {
+    if (tokens.access_token === undefined || tokens.access_token === '') {
       throw new Error('Failed to obtain access token from Google')
     }
 
     return {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? undefined,
-      expiresIn: tokens.expiry_date ? Math.floor((tokens.expiry_date - Date.now()) / 1000) : undefined
+      expiresIn: (tokens.expiry_date !== null && tokens.expiry_date !== undefined) ? Math.floor((tokens.expiry_date - Date.now()) / 1000) : undefined
     }
   }
 
@@ -87,7 +97,7 @@ export class GoogleOAuthProvider implements IOAuthProvider {
       picture: string
     }
 
-    if (!payload.id || !payload.email) {
+    if (payload.id === undefined || payload.id === '' || payload.email === undefined || payload.email === '') {
       throw new Error('Failed to get user profile from Google')
     }
 

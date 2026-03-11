@@ -36,16 +36,18 @@ export class JwtTokenProvider implements ITokenService {
     const payload = {
       id: user.id,
       email: user.email,
-      role: user.roles[0] || Role.CLIENT
+      role: (user.roles[0] != null) ?? Role.CLIENT
     }
 
-    const accessToken = jwt.sign(payload, this.jwtSecret, {
+    const accessTokenOptions: SignOptions = {
       expiresIn: this.accessTokenExpiry
-    } as SignOptions)
+    }
+    const accessToken = jwt.sign(payload, this.jwtSecret, accessTokenOptions)
 
-    const refreshToken = jwt.sign(payload, this.jwtSecret, {
+    const refreshTokenOptions: SignOptions = {
       expiresIn: this.refreshTokenExpiry
-    } as SignOptions)
+    }
+    const refreshToken = jwt.sign(payload, this.jwtSecret, refreshTokenOptions)
 
     return { accessToken, refreshToken }
   }
@@ -64,13 +66,15 @@ export class JwtTokenProvider implements ITokenService {
       role
     }
 
-    const accessToken = jwt.sign(payload, this.jwtSecret, {
+    const accessTokenOptions: SignOptions = {
       expiresIn: this.accessTokenExpiry
-    } as SignOptions)
+    }
+    const accessToken = jwt.sign(payload, this.jwtSecret, accessTokenOptions)
 
-    const refreshToken = jwt.sign(payload, this.jwtSecret, {
+    const refreshTokenOptions: SignOptions = {
       expiresIn: this.refreshTokenExpiry
-    } as SignOptions)
+    }
+    const refreshToken = jwt.sign(payload, this.jwtSecret, refreshTokenOptions)
 
     return { accessToken, refreshToken }
   }
@@ -95,8 +99,9 @@ export class JwtTokenProvider implements ITokenService {
       type: 'email_verification'
     }
 
-    return jwt.sign(payload, this.jwtSecret, {
+    const verificationTokenOptions: SignOptions = {
       expiresIn: '24h' // Token válido por 24 horas
-    } as SignOptions)
+    }
+    return jwt.sign(payload, this.jwtSecret, verificationTokenOptions)
   }
 }

@@ -3,7 +3,6 @@
 import { injectable, inject } from 'tsyringe'
 import { User } from '../../../domain/entities/User'
 
-import { AccountType } from '../../../domain/types/AccountType'
 import { IAccountRepository } from '../../ports/IAccountRepository'
 import { IRegistrationStrategy } from '../../ports/IRegistrationStrategy'
 import { IEmailService } from '../../ports/IEmailService'
@@ -16,7 +15,7 @@ import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
  * @description Extension of IRegistrationStrategy that includes account creation logic
  */
 export interface IRegistrationStrategyWithAccount extends IRegistrationStrategy {
-  applySpecifics(user: User, request: RegisterUserRequest): Promise<User>
+  applySpecifics: (user: User, request: RegisterUserRequest) => Promise<User>
 }
 
 /**
@@ -25,7 +24,7 @@ export interface IRegistrationStrategyWithAccount extends IRegistrationStrategy 
  */
 @injectable()
 export class ClientRegistrationStrategy implements IRegistrationStrategyWithAccount {
-  constructor(
+  constructor (
     @inject(INJECTION_TOKENS.ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
     @inject(INJECTION_TOKENS.EMAIL_SERVICE)
@@ -34,11 +33,11 @@ export class ClientRegistrationStrategy implements IRegistrationStrategyWithAcco
     private readonly tokenService: ITokenService
   ) { }
 
-  public async applySpecifics(user: User, request: RegisterUserRequest): Promise<User> {
+  public async applySpecifics (user: User, request: RegisterUserRequest): Promise<User> {
     console.log(`[STRATEGY] User ${user.email} registered as CLIENT.`)
 
     // Enviar correo de verificación
-    await this.emailService.sendVerificationEmail(user.email, user.firstName, user.id!)
+    await this.emailService.sendVerificationEmail(user.email, user.firstName, user?.id ?? '')
     console.log(`[STRATEGY] Verification email sent to ${user.email}`)
 
     return user
@@ -51,7 +50,7 @@ export class ClientRegistrationStrategy implements IRegistrationStrategyWithAcco
  */
 @injectable()
 export class ServiceProviderRegistrationStrategy implements IRegistrationStrategyWithAccount {
-  constructor(
+  constructor (
     @inject(INJECTION_TOKENS.ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
     @inject(INJECTION_TOKENS.EMAIL_SERVICE)
@@ -60,11 +59,11 @@ export class ServiceProviderRegistrationStrategy implements IRegistrationStrateg
     private readonly tokenService: ITokenService
   ) { }
 
-  public async applySpecifics(user: User, request: RegisterUserRequest): Promise<User> {
+  public async applySpecifics (user: User, request: RegisterUserRequest): Promise<User> {
     console.log(`[STRATEGY] User ${user.email} registered as SERVICE_PROVIDER.`)
 
     // Enviar correo de verificación
-    await this.emailService.sendVerificationEmail(user.email, user.firstName, user.id!)
+    await this.emailService.sendVerificationEmail(user.email, user.firstName, user?.id ?? '')
     console.log(`[STRATEGY] Verification email sent to ${user.email}`)
 
     return user

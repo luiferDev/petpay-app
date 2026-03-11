@@ -8,19 +8,28 @@ const TEST_SECRET = 'this-is-a-very-secure-secret-key-32chars!'
 describe('OAuthController - initiate() cookie tests', () => {
   let mockResponse: Partial<Response>
   let cookies: Record<string, string>
-  let stateManager: OAuthStateManager
 
   beforeEach(() => {
-    stateManager = new OAuthStateManager(TEST_SECRET)
     cookies = {}
 
+    // Helper function to clear a cookie without dynamic delete
+    const clearCookieHelper = (cookieName: string): void => {
+      const newCookies: Record<string, string> = {}
+      for (const key of Object.keys(cookies)) {
+        if (key !== cookieName) {
+          newCookies[key] = cookies[key]
+        }
+      }
+      cookies = newCookies
+    }
+
     mockResponse = {
-      cookie: vi.fn((name: string, value: string, options: any) => {
+      cookie: vi.fn((name: string, value: string, _options: unknown) => {
         cookies[name] = value
         return mockResponse as Response
       }),
       clearCookie: vi.fn((name: string) => {
-        delete cookies[name]
+        clearCookieHelper(name)
         return mockResponse as Response
       }),
       redirect: vi.fn(),
@@ -55,7 +64,7 @@ describe('OAuthController - initiate() cookie tests', () => {
         })
       )
 
-      expect(cookies['oauth_state']).toBeDefined()
+      expect(cookies.oauth_state).toBeDefined()
     })
 
     it('should set cookie with correct maxAge (600000ms = 10 minutes)', () => {
@@ -164,7 +173,7 @@ describe('OAuthController - initiate() cookie tests', () => {
 
       controllerInit(mockRequest, mockResponse as Response)
 
-      const state = cookies['oauth_state']
+      const state = cookies.oauth_state
       expect(state).toBeDefined()
       const parts = state.split(':')
       expect(parts.length).toBe(3)
@@ -175,16 +184,16 @@ describe('OAuthController - initiate() cookie tests', () => {
   })
 })
 
-function createMockInitiate(): (req: Request, res: Response) => void {
+function createMockInitiate (): (req: Request, res: Response) => void {
   const stateManager = new OAuthStateManager(TEST_SECRET)
 
-  return function initiate(req: Request, res: Response): void {
+  return function initiate (req: Request, res: Response): void {
     const { provider } = req.params
 
     if (provider !== 'google' && provider !== 'github') {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
-        message: `Invalid OAuth provider: ${provider}. Supported providers: google, github`
+        message: `Invalid OAuth provider: ${provider ?? 'unknown'}. Supported providers: google, github`
       })
       return
     }
@@ -197,7 +206,7 @@ function createMockInitiate(): (req: Request, res: Response) => void {
       return
     }
 
-    if (!isProviderConfigured(provider as 'google' | 'github')) {
+    if (!isProviderConfigured(provider)) {
       res.status(503).json({
         error: 'PROVIDER_NOT_CONFIGURED',
         message: `OAuth provider ${provider} is not configured`
@@ -226,12 +235,12 @@ function createMockInitiate(): (req: Request, res: Response) => void {
   }
 }
 
-function isOAuthEnabled(): boolean {
+function isOAuthEnabled (): boolean {
   return process.env.OAUTH_GOOGLE_CLIENT_ID !== undefined ||
          process.env.OAUTH_GITHUB_CLIENT_ID !== undefined
 }
 
-function isProviderConfigured(provider: 'google' | 'github'): boolean {
+function isProviderConfigured (provider: 'google' | 'github'): boolean {
   if (provider === 'google') {
     return process.env.OAUTH_GOOGLE_CLIENT_ID !== undefined &&
            process.env.OAUTH_GOOGLE_CLIENT_SECRET !== undefined

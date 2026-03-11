@@ -7,25 +7,25 @@ export abstract class IUserRepository {
   /**
    * Persiste un usuario en la base de datos.
    */
-  abstract save(user: any): Promise<any>;
+  abstract save (user: any): Promise<any>
 
   /**
    * Busca un usuario por su ID único.
    */
-  abstract findById(id: string): Promise<any | null>;
+  abstract findById (id: string): Promise<any | null>
 
   /**
    * Busca un usuario por su correo electrónico.
    */
-  abstract findByEmail(email: string): Promise<any | null>;
+  abstract findByEmail (email: string): Promise<any | null>
 
   /**
    * Verifica si un email ya está registrado.
    */
-  abstract existsByEmail(email: string): Promise<boolean>;
+  abstract existsByEmail (email: string): Promise<boolean>
 
   /**
    * Elimina un usuario por su ID.
    */
-  abstract deleteById(id: string): Promise<void>;
+  abstract deleteById (id: string): Promise<void>
 }

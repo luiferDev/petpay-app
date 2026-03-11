@@ -2,7 +2,6 @@
 
 import { injectable, container } from 'tsyringe'
 import { Request, Response } from 'express'
-import path from 'path'
 import { logger } from '../../../shared/utils/logger'
 import { DomainError, UserNotFoundError } from '../../../domain/errors/DomainError'
 import { LoginRequest } from '../../../application/dtos/LoginDTOs'
@@ -13,6 +12,9 @@ import { Role } from '../../../domain/types/Role'
 import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 import { userRegisterSchema } from '../validation/zod-schemas/register-schema'
 import { ZodError } from 'zod'
+import { withAdvisoryLock } from '../../../shared/utils/concurrency'
+import { Config } from '../../config/env'
+import { getDb } from '../../database/drizzle/client'
 
 /**
  * @class AuthController
@@ -23,7 +25,7 @@ import { ZodError } from 'zod'
  */
 @injectable()
 export class AuthController {
-  constructor(
+  constructor (
     private readonly registerUseCase: RegisterUserUseCase,
     private readonly loginUseCase: LoginUseCase
   ) { }
@@ -41,12 +43,12 @@ export class AuthController {
       const requestData: RegisterUserRequest = {
         email: validatedData.email,
         password: validatedData.password,
-        firstName: validatedData.firstName!,
-        lastName: validatedData.lastName!,
+        firstName: validatedData.firstName ?? '',
+        lastName: validatedData.lastName ?? '',
         role: Role.CLIENT
       }
 
-      if (validatedData.phone) {
+      if (validatedData.phone !== undefined && validatedData.phone !== '') {
         requestData.phone = validatedData.phone
       }
 
@@ -80,16 +82,16 @@ export class AuthController {
       if (error instanceof DomainError) {
         return res.status(error.suggestedHttpCode).json({
           status: error.suggestedHttpCode,
-          message: error.message,
+          message: (error as any).message,
           error: error.name
         })
       }
 
       // Enhanced error logging for debugging
       logger.error('Unexpected error during registration', {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? (error as any).message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        email: (error as any)?.email || 'unknown'
+        email: (error as any)?.email ?? 'unknown'
       })
       return res.status(500).json({ status: 500, message: 'Internal Server Error' })
     }
@@ -110,12 +112,12 @@ export class AuthController {
       const requestData: RegisterUserRequest = {
         email: validatedData.email,
         password: validatedData.password,
-        firstName: validatedData.firstName!,
-        lastName: validatedData.lastName!,
-        role: (role?.toUpperCase() || 'CLIENT') as RegisterUserRequest['role']
+        firstName: validatedData.firstName ?? '',
+        lastName: validatedData.lastName ?? '',
+        role: (role?.toUpperCase() ?? 'CLIENT') as RegisterUserRequest['role']
       }
 
-      if (validatedData.phone) {
+      if (validatedData.phone !== undefined && validatedData.phone !== '') {
         requestData.phone = validatedData.phone
       }
 
@@ -146,16 +148,16 @@ export class AuthController {
       if (error instanceof DomainError) {
         return res.status(error.suggestedHttpCode).json({
           status: error.suggestedHttpCode,
-          message: error.message,
+          message: (error as any).message,
           error: error.name
         })
       }
 
       // Enhanced error logging for debugging
       logger.error('Unexpected error during registration', {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? (error as any).message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        email: (error as any)?.email || 'unknown'
+        email: (error as any)?.email ?? 'unknown'
       })
       return res.status(500).json({ status: 500, message: 'Internal Server Error' })
     }
@@ -202,7 +204,7 @@ export class AuthController {
       if (error instanceof DomainError) {
         return res.status(error.suggestedHttpCode).json({
           status: error.suggestedHttpCode,
-          message: error.message
+          message: (error as any).message
         })
       }
 
@@ -241,35 +243,75 @@ export class AuthController {
 
   /**
    * Endpoint GET /verify-email/:userId
-   * Verifica el email de un usuario.
+   * Verifica el email de un usuario usando advisory locks.
    * @param {Request} req - Contiene el userId en los parámetros.
    */
   verifyEmail = async (req: Request, res: Response): Promise<void> => {
     try {
       const { userId } = req.params
 
-      if (!userId) {
+      if (userId == null || userId === '') {
         res.status(400).send('<h1>ID de usuario inválido</h1>')
         return
       }
 
-      const userRepository = container.resolve<any>(INJECTION_TOKENS.USER_REPOSITORY)
-      const user = await userRepository.findById(userId)
+      // Calculate deterministic lock key from user ID (hash function for 64-bit integer)
+      // Using a simple hash function to convert user ID to lock key
+      const lockKey = this.calculateLockKey(userId)
 
-      if (!user) {
+      // Wrap the verification logic with advisory lock
+      await withAdvisoryLock(
+        getDb(),
+        lockKey,
+        { timeoutMs: Config.ADVISORY_LOCK_TIMEOUT_MS },
+        async () => {
+          const userRepository = container.resolve<any>(INJECTION_TOKENS.USER_REPOSITORY)
+          const user = await userRepository.findById(userId)
+
+          if (user === null) {
+            throw new Error('USER_NOT_FOUND')
+          }
+
+          user.markAsVerified()
+          await userRepository.save(user)
+
+          logger.info('Email verified successfully', { userId: user.id, email: user.email })
+        }
+      )
+
+      res.status(200).render('verifySuccess')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      if (err.message === 'USER_NOT_FOUND') {
         res.status(404).send('<h1>Usuario no encontrado</h1>')
         return
       }
 
-      user.markAsVerified()
-      await userRepository.save(user)
+      if (typeof err.message === 'string' && err.message.includes('Lock timeout')) {
+        logger.warn('Advisory lock timeout during email verification', { userId: req.params.userId })
+        res.status(423).send('<h1>El servicio está ocupado. Por favor, intente de nuevo.</h1>')
+        return
+      }
 
-      logger.info('Email verified successfully', { userId: user.id, email: user.email })
-
-      res.status(200).render('verifySuccess')
-    } catch (error) {
       logger.error('Error verifying email', { error })
       res.status(500).send('<h1>Error al verificar el email.</h1>')
     }
+  }
+
+  /**
+   * Calculate a deterministic lock key from a user ID string.
+   * Uses a simple hash function to convert string to 64-bit integer.
+   * @param {string} userId - The user ID string
+   * @returns {number} A 64-bit integer lock key
+   */
+  private calculateLockKey (userId: string): number {
+    // Simple hash function to convert string to 64-bit integer
+    let hash = 0
+    for (let i = 0; i < userId.length; i++) {
+      const char = userId.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    return hash
   }
 }

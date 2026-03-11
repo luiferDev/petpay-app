@@ -14,7 +14,7 @@ import { setupDI } from '../DI/container'
 const logger = {
   info: (msg: string) => console.log(`[INFO] ${msg}`),
   error: (msg: string) => console.error(`[ERROR] ${msg}`),
-  warn: (msg: string) => console.warn(`[WARN] ${msg}`),
+  warn: (msg: string) => console.warn(`[WARN] ${msg}`)
 }
 
 // Setup Dependency Injection

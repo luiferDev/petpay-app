@@ -45,7 +45,7 @@ describe('OAuthStateManager', () => {
     it('should reject tampered signature', () => {
       const state = stateManager.generateState()
       const parts = state.split(':')
-      const tamperedState = `${parts[0]}:${parts[1]}:${'a'.repeat(64)}`
+      const tamperedState = `${parts[0] as string}:${parts[1] as string}:${'a'.repeat(64)}`
 
       const result = stateManager.validateState(tamperedState, tamperedState)
 
@@ -57,7 +57,7 @@ describe('OAuthStateManager', () => {
     it('should reject tampered random part', () => {
       const state = stateManager.generateState()
       const parts = state.split(':')
-      const tamperedState = `${parts[0]}:${'b'.repeat(32)}:${parts[2]}`
+      const tamperedState = `${parts[0] as string}:${'b'.repeat(32)}:${parts[2] as string}`
 
       const result = stateManager.validateState(tamperedState, tamperedState)
 
@@ -101,7 +101,7 @@ describe('OAuthStateManager', () => {
     it('should reject invalid timestamp', () => {
       const state = stateManager.generateState()
       const parts = state.split(':')
-      const invalidState = `not-a-number:${parts[1]}:${parts[2]}`
+      const invalidState = `not-a-number:${parts[1] as string}:${parts[2] as string}`
 
       const result = stateManager.validateState(invalidState, invalidState)
 

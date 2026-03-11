@@ -2,7 +2,6 @@ import 'reflect-metadata'
 import { describe, it, expect, beforeEach, vi } from 'bun:test'
 import { LoginUseCase } from '../LoginUseCase'
 import type { IUserRepository } from '../../../../domain/repositories/IUserRepository'
-import type { ITokenService } from '../../../ports/ITokenService'
 import type { User } from '../../../../domain/entities/User'
 import { UserNotFoundError, DomainError } from '../../../../domain/errors/DomainError'
 

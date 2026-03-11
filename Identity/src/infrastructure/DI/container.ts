@@ -14,7 +14,6 @@ import { IEmailService } from '../../application/ports/IEmailService'
 import type { IEventPublisher } from '../../application/ports/IEventPublisher'
 import { INJECTION_TOKENS } from './InjectionTokens'
 import { ITokenService } from '../../application/ports/ITokenService'
-import { IUserRepository } from '../../domain/repositories/IUserRepository'
 import { IAccountRepository } from '../../domain/repositories/IAccountRepository'
 import { JwtTokenProvider } from '../services/JwtTokenProvider'
 import { LoginUseCase } from '../../application/use-case/auth/LoginUseCase'
@@ -106,7 +105,7 @@ export function setupDI (): void {
   container.register(INJECTION_TOKENS.OAUTH_STATE_MANAGER, {
     useFactory: () => {
       const secret = Config.OAUTH_STATE_SECRET
-      if (!secret || secret.length < 32) {
+      if (secret === null || secret === undefined || secret === '' || secret.length < 32) {
         throw new Error('OAUTH_STATE_SECRET must be at least 32 characters')
       }
       return new OAuthStateManager(secret)

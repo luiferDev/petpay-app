@@ -13,12 +13,12 @@ const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'secret'
  * @param res Objeto de respuesta de Express
  * @param next Función para pasar al siguiente middleware/controlador
  */
-export const protect = (req: Request, res: Response, next: NextFunction) => {
+export const protect = (req: Request, res: Response, next: NextFunction): void => {
   try {
     // 1. Obtener el token de la cookie (asumimos que se usa cookie httponly)
     const token: string | undefined = req.cookies?.access_token
 
-    if (!token) {
+    if (token === null || token === undefined || token === '') {
       logger.warn('Acceso denegado: No se encontró token en cookies.')
       return res.status(401).json({ message: 'Acceso no autorizado. Token no proporcionado.' })
     }

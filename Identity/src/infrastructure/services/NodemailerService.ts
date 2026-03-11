@@ -7,6 +7,7 @@ import { injectable, singleton } from 'tsyringe'
 import { logger } from '../../shared/utils/logger' // Importado de Shared/Utils
 import nodemailer from 'nodemailer'
 import path from 'path'
+import fs from 'fs'
 
 // Importado de Infrastructure/Config
 
@@ -23,16 +24,16 @@ import path from 'path'
 export class NodemailerService implements IEmailService {
   private readonly emailClient: Email
 
-  constructor() {
+  constructor () {
     // 1. Configuración del transportador SMTP (usando las variables de Config)
-    const emailService = Config.EMAIL_SERVICE || process.env.EMAIL_SERVICE || 'gmail'
-    const emailUser = Config.EMAIL_USER || process.env.EMAIL_USER
-    const emailPassword = Config.EMAIL_PASSWORD || process.env.EMAIL_PASSWORD
+    const emailService = Config.EMAIL_SERVICE ?? process.env.EMAIL_SERVICE ?? 'gmail'
+    const emailUser = Config.EMAIL_USER ?? process.env.EMAIL_USER
+    const emailPassword = Config.EMAIL_PASSWORD ?? process.env.EMAIL_PASSWORD
 
     console.log('[NodemailerService] Initializing with config:', {
       service: emailService,
       user: emailUser,
-      hasPassword: !!emailPassword,
+      hasPassword: emailPassword !== undefined && emailPassword !== '',
       configService: Config.EMAIL_SERVICE,
       configUser: Config.EMAIL_USER,
       envService: process.env.EMAIL_SERVICE,
@@ -43,7 +44,7 @@ export class NodemailerService implements IEmailService {
     // when credentials are missing (that causes "Missing credentials for 'PLAIN'" errors).
     const transportOptions: any = { service: emailService }
 
-    if (emailUser && emailPassword) {
+    if (emailUser !== undefined && emailUser !== '' && emailPassword !== undefined && emailPassword !== '') {
       transportOptions.auth = { user: emailUser, pass: emailPassword }
     } else {
       logger.warn('Nodemailer credentials missing; creating transport without auth. In production set EMAIL_USER and EMAIL_PASSWORD.')
@@ -53,21 +54,20 @@ export class NodemailerService implements IEmailService {
     }
 
     // If we have credentials use normal transport, otherwise use jsonTransport to avoid auth errors
-    const transporter = (emailUser && emailPassword)
+    const transporter = (emailUser !== undefined && emailUser !== '' && emailPassword !== undefined && emailPassword !== '')
       ? nodemailer.createTransport(transportOptions)
       : nodemailer.createTransport({ jsonTransport: true })
 
     // 2. Inicialización del cliente de plantillas
     // Use __dirname to resolve templates path relative to this file, ensuring it works in Docker/production
     const templatesDir = path.join(__dirname, '../../..', 'templates')
-    
+
     // Verificar si el directorio de templates existe
-    const fs = require('fs')
     if (fs.existsSync(templatesDir)) {
       logger.info(`✅ Templates directory exists: ${templatesDir}`)
       const files = fs.readdirSync(templatesDir)
       logger.info(`Templates found: ${JSON.stringify(files)}`)
-      
+
       // Verificar si existe verificationEmail
       const verificationEmailPath = path.join(templatesDir, 'verificationEmail')
       if (fs.existsSync(verificationEmailPath)) {
@@ -79,10 +79,10 @@ export class NodemailerService implements IEmailService {
     } else {
       logger.error(`❌ Templates directory NOT found: ${templatesDir}`)
     }
-    
+
     this.emailClient = new Email({
       message: {
-        from: Config.EMAIL_USER || 'noreply@petpay.com'
+        from: Config.EMAIL_USER ?? 'noreply@petpay.com'
       },
       send: true,
       transport: transporter,
@@ -100,7 +100,7 @@ export class NodemailerService implements IEmailService {
   /**
    * {@inheritDoc}
    */
-  public async send(
+  public async send (
     template: string,
     to: string,
     subject: string,
@@ -151,14 +151,14 @@ export class NodemailerService implements IEmailService {
   /**
    * {@inheritDoc}
    */
-  public async sendVerificationEmail(
+  public async sendVerificationEmail (
     to: string,
     firstName: string,
     userId: string
   ): Promise<{ success: boolean, messageId?: string, error?: any }> {
-    const verificationLink = `${Config.FRONTEND_URL || 'http://localhost:3000'}/auth/verify-email/${userId}`
+    const verificationLink = `${Config.FRONTEND_URL ?? 'http://localhost:3000'}/auth/verify-email/${userId}`
 
-    return this.send(
+    return await this.send(
       'verificationEmail',
       to,
       'Verifica tu cuenta de Petpay',

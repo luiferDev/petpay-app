@@ -6,7 +6,6 @@ import { User } from '../../../domain/entities/User'
 import { IRegistrationStrategy } from '../../ports/IRegistrationStrategy'
 import { IEmailService } from '../../ports/IEmailService'
 import { ITokenService } from '../../ports/ITokenService'
-import { AccountType } from '../../../domain/types/AccountType'
 import { IAccountRepository } from '../../ports/IAccountRepository'
 import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
 
@@ -16,7 +15,7 @@ import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
  */
 @injectable()
 export class AdminRegistrationStrategy implements IRegistrationStrategy {
-  constructor(
+  constructor (
     @inject(INJECTION_TOKENS.ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
     @inject(INJECTION_TOKENS.EMAIL_SERVICE)
@@ -25,11 +24,11 @@ export class AdminRegistrationStrategy implements IRegistrationStrategy {
     private readonly tokenService: ITokenService
   ) { }
 
-  public async applySpecifics(user: User, request: RegisterUserRequest): Promise<User> {
+  public async applySpecifics (user: User, request: RegisterUserRequest): Promise<User> {
     console.log(`[STRATEGY] User ${user.email} registered as ADMIN.`)
 
     // Enviar correo de verificación
-    await this.emailService.sendVerificationEmail(user.email, user.firstName, user.id!)
+    await this.emailService.sendVerificationEmail(user.email, user.firstName, user?.id ?? '')
     console.log(`[STRATEGY] Verification email sent to ${user.email}`)
 
     return user

@@ -23,7 +23,7 @@ export class LoginUseCase {
     private readonly userRepository: IUserRepository,
     @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
     private readonly tokenProvider: ITokenService
-  ) {}
+  ) { }
 
   /**
    * Ejecuta el caso de uso de autenticación.
@@ -55,7 +55,7 @@ export class LoginUseCase {
     }
 
     // 3. Verificar estado (ej. cuenta no verificada)
-    if (!user.isVerified) {
+    if (user.isVerified === false) {
       throw new DomainError('Account is not verified', 403)
     }
 
@@ -65,9 +65,9 @@ export class LoginUseCase {
     // 5. Retornar Respuesta (DTO)
     return {
       user: {
-        id: user.id!,
+        id: user.id,
         email: user.email,
-        fullName: `${user.firstName} ${user.lastName}`,
+        fullName: `${String(user.firstName)} ${String(user.lastName)}`,
         roles: user.roles,
         isVerified: user.isVerified
       },

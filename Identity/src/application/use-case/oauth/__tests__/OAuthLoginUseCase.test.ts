@@ -1,10 +1,10 @@
 import 'reflect-metadata'
 import { describe, it, expect, beforeEach, vi } from 'bun:test'
+import * as crypto from 'crypto'
 import { OAuthLoginUseCase } from '../OAuthLoginUseCase'
 import { OAuthStateManager } from '../../../../infrastructure/services/OAuthStateManager'
 import { OAuthInvalidStateError } from '../../../../domain/errors/OAuthError'
 import type { IOAuthProvider, OAuthUserProfile, OAuthTokens } from '../../../ports/IOAuthProvider'
-import type { ITokenService } from '../../../ports/ITokenService'
 import type { IOAuthUserRepository } from '../../../ports/IOAuthUserRepository'
 import type { IUserRepository } from '../../../../domain/repositories/IUserRepository'
 import type { User } from '../../../../domain/entities/User'
@@ -148,7 +148,7 @@ describe('OAuthLoginUseCase', () => {
       const oldTimestamp = Date.now() - (11 * 60 * 1000)
       const random = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
       const data = `${oldTimestamp}:${random}`
-      const signature = require('crypto').createHmac('sha256', TEST_SECRET).update(data).digest('hex')
+      const signature: string = crypto.createHmac('sha256', TEST_SECRET).update(data).digest('hex')
       const expiredState = `${oldTimestamp}:${random}:${signature}`
 
       await expect(

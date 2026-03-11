@@ -45,7 +45,7 @@ export class LinkOAuthProviderUseCase {
     private readonly tokenProvider: ITokenService,
     @inject(INJECTION_TOKENS.OAUTH_STATE_MANAGER)
     private readonly stateManager: OAuthStateManager
-  ) {}
+  ) { }
 
   /**
    * @private
@@ -69,14 +69,18 @@ export class LinkOAuthProviderUseCase {
     const oauthProvider = this.getOAuthProvider(request.provider)
 
     // 1. Validate state using OAuthStateManager
-    const validationResult = this.stateManager.validateState(request.state, request.cookieState || '')
+    const validationResult = this.stateManager.validateState(request.state, request.cookieState ?? '')
 
     if (!validationResult.isValid) {
-      throw new OAuthInvalidStateError(validationResult.error?.message || 'Invalid state parameter')
-    }
+      // !! forces the string to a boolean, satisfying the strict-boolean-expressions rule
+      const message = (validationResult.error?.message !== undefined)
+        ? validationResult.error.message
+        : 'Invalid state parameter'
 
+      throw new OAuthInvalidStateError(message)
+    }
     // 2. Check timestamp expiration (10-minute window)
-    if (validationResult.payload && this.stateManager.isExpired(validationResult.payload.timestamp, STATE_MAX_AGE_MS)) {
+    if ((validationResult.payload != null) && this.stateManager.isExpired(validationResult.payload.timestamp, STATE_MAX_AGE_MS)) {
       throw new OAuthInvalidStateError('State parameter has expired')
     }
 
@@ -132,7 +136,9 @@ export class LinkOAuthProviderUseCase {
       providerUserId: profile.providerId,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
+      expiresAt: tokens.expiresIn !== undefined && tokens.expiresIn !== null
+        ? new Date(Date.now() + tokens.expiresIn * 1000)
+        : undefined
     })
 
     return {

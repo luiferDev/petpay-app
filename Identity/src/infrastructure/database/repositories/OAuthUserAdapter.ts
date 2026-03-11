@@ -25,11 +25,11 @@ import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 export class OAuthUserAdapter implements IOAuthUserRepository {
   private readonly db: DbClient
 
-  constructor(@inject(INJECTION_TOKENS.DB_CLIENT) db: DbClient) {
+  constructor (@inject(INJECTION_TOKENS.DB_CLIENT) db: DbClient) {
     this.db = db
   }
 
-  async findByProviderAndId(
+  async findByProviderAndId (
     provider: 'google' | 'github',
     providerUserId: string
   ): Promise<OAuthUserRecord | null> {
@@ -48,10 +48,15 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
       return null
     }
 
-    return this.mapToRecord(result[0]!)
+    const firstResult = result[0]
+    if (firstResult === null || firstResult === undefined) {
+      return null
+    }
+
+    return this.mapToRecord(firstResult)
   }
 
-  async findByUserIdAndProvider(
+  async findByUserIdAndProvider (
     userId: string,
     provider: 'google' | 'github'
   ): Promise<OAuthUserRecord | null> {
@@ -70,10 +75,15 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
       return null
     }
 
-    return this.mapToRecord(result[0]!)
+    const firstResult = result[0]
+    if (firstResult === null || firstResult === undefined) {
+      return null
+    }
+
+    return this.mapToRecord(firstResult)
   }
 
-  async findByUserId(userId: string): Promise<OAuthUserRecord[]> {
+  async findByUserId (userId: string): Promise<OAuthUserRecord[]> {
     const result = await this.db
       .select()
       .from(userOAuthProviders)
@@ -82,7 +92,7 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
     return result.map(this.mapToRecord)
   }
 
-  async create(record: CreateOAuthUserRecord): Promise<OAuthUserRecord> {
+  async create (record: CreateOAuthUserRecord): Promise<OAuthUserRecord> {
     const [created] = await this.db
       .insert(userOAuthProviders)
       .values({
@@ -95,14 +105,14 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
       })
       .returning()
 
-    if (!created) {
+    if (created === null || created === undefined) {
       throw new Error('Failed to create OAuth user record')
     }
 
     return this.mapToRecord(created)
   }
 
-  async updateTokens(id: string, tokens: UpdateOAuthTokens): Promise<void> {
+  async updateTokens (id: string, tokens: UpdateOAuthTokens): Promise<void> {
     await this.db
       .update(userOAuthProviders)
       .set({
@@ -114,13 +124,13 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
       .where(eq(userOAuthProviders.id, id))
   }
 
-  async delete(id: string): Promise<void> {
+  async delete (id: string): Promise<void> {
     await this.db
       .delete(userOAuthProviders)
       .where(eq(userOAuthProviders.id, id))
   }
 
-  async deleteByUserId(userId: string): Promise<void> {
+  async deleteByUserId (userId: string): Promise<void> {
     await this.db
       .delete(userOAuthProviders)
       .where(eq(userOAuthProviders.userId, userId))
@@ -131,7 +141,7 @@ export class OAuthUserAdapter implements IOAuthUserRepository {
    * @method mapToRecord
    * @description Mapea el resultado de Drizzle a la interfaz OAuthUserRecord.
    */
-  private mapToRecord(
+  private mapToRecord (
     dbRecord: typeof userOAuthProviders.$inferSelect
   ): OAuthUserRecord {
     return {

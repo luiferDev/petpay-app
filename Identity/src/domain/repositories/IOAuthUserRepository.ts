@@ -40,11 +40,11 @@ export class UpdateOAuthTokens {
  * @description Port (Clase Abstracta) para persistencia OAuth.
  */
 export abstract class IOAuthUserRepository {
-  abstract findByProviderAndId(provider: 'google' | 'github', providerUserId: string): Promise<OAuthUserRecord | null>;
-  abstract findByUserIdAndProvider(userId: string, provider: 'google' | 'github'): Promise<OAuthUserRecord | null>;
-  abstract findByUserId(userId: string): Promise<OAuthUserRecord[]>;
-  abstract create(record: CreateOAuthUserRecord): Promise<OAuthUserRecord>;
-  abstract updateTokens(id: string, tokens: UpdateOAuthTokens): Promise<void>;
-  abstract delete(id: string): Promise<void>;
-  abstract deleteByUserId(userId: string): Promise<void>;
+  abstract findByProviderAndId (provider: 'google' | 'github', providerUserId: string): Promise<OAuthUserRecord | null>
+  abstract findByUserIdAndProvider (userId: string, provider: 'google' | 'github'): Promise<OAuthUserRecord | null>
+  abstract findByUserId (userId: string): Promise<OAuthUserRecord[]>
+  abstract create (record: CreateOAuthUserRecord): Promise<OAuthUserRecord>
+  abstract updateTokens (id: string, tokens: UpdateOAuthTokens): Promise<void>
+  abstract delete (id: string): Promise<void>
+  abstract deleteByUserId (userId: string): Promise<void>
 }

@@ -2,7 +2,6 @@
 
 import {
   boolean,
-  doublePrecision,
   integer,
   pgEnum,
   pgTable,

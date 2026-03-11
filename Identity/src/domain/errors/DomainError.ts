@@ -53,3 +53,14 @@ export class UserAlreadyExistsError extends DomainError {
     Object.setPrototypeOf(this, UserAlreadyExistsError.prototype)
   }
 }
+
+/**
+ * @class LockTimeoutError
+ * @description Error lanzado cuando un advisory lock no puede ser adquirido dentro del timeout.
+ */
+export class LockTimeoutError extends DomainError {
+  constructor (message: string = 'Lock timeout: Could not acquire lock') {
+    super(message, 423, 'LockTimeoutError')
+    Object.setPrototypeOf(this, LockTimeoutError.prototype)
+  }
+}

@@ -25,7 +25,7 @@ export const userRegisterSchema = z.object({
 }).transform((data) => {
   const nameParts = data.fullName.trim().split(/\s+/)
   const firstName = nameParts[0]
-  const lastName = nameParts.slice(1).join(' ') || nameParts[0]
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0]
 
   return {
     email: data.email,
@@ -33,7 +33,7 @@ export const userRegisterSchema = z.object({
     passwordHash: data.password,
     firstName,
     lastName,
-    phone: data.phone || undefined
+    phone: data.phone ?? undefined
   }
 })
 

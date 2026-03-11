@@ -1,5 +1,4 @@
 import { Role } from '../../domain/types/Role'
-import { User } from '../../domain/entities/User'
 import { IRegistrationStrategy } from '../ports/IRegistrationStrategy'
 import { UserResponse } from './UserResponse.dto'
 

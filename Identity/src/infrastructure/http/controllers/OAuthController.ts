@@ -37,10 +37,10 @@ export class OAuthController {
     const { provider } = req.params
 
     // Validate provider
-    if (!provider || !this.isValidProvider(provider)) {
+    if (provider === undefined || provider === '' || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
-        message: `Invalid OAuth provider: ${provider}. Supported providers: google, github`
+        message: `Invalid OAuth provider: ${provider ?? 'undefined'}. Supported providers: google, github`
       })
       return
     }
@@ -102,16 +102,16 @@ export class OAuthController {
     const { code, state } = req.query
 
     // Validate provider
-    if (!provider || !this.isValidProvider(provider)) {
+    if (provider === undefined || provider === '' || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
-        message: `Invalid OAuth provider: ${provider}`
+        message: `Invalid OAuth provider: ${provider ?? 'undefined'}`
       })
       return
     }
 
     // Validate required params
-    if (!code || !state) {
+    if (code === undefined || code === '' || state === undefined || state === '') {
       res.status(400).json({
         error: 'MISSING_PARAMS',
         message: 'Missing code or state parameter'
@@ -155,13 +155,13 @@ export class OAuthController {
       logger.info('OAuth login successful', { provider, userId: result.user.id })
 
       // Redirect to frontend
-      const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+      const redirectUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
       res.redirect(`${redirectUrl}/auth/callback?success=true`)
     } catch (error) {
       logger.error('OAuth callback failed', { provider, error })
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+      const redirectUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
       res.redirect(`${redirectUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`)
     }
   }
@@ -176,7 +176,7 @@ export class OAuthController {
     const userId = req.user?.id
 
     // Check authentication
-    if (!userId) {
+    if (userId === null || userId === undefined || userId === '') {
       res.status(401).json({
         error: 'UNAUTHORIZED',
         message: 'Authentication required'
@@ -185,16 +185,16 @@ export class OAuthController {
     }
 
     // Validate provider
-    if (!provider || !this.isValidProvider(provider)) {
+    if (provider === null || provider === undefined || provider === '' || !this.isValidProvider(provider)) {
       res.status(400).json({
         error: 'INVALID_PROVIDER',
-        message: `Invalid OAuth provider: ${provider}`
+        message: `Invalid OAuth provider: ${provider ?? 'unknown'}`
       })
       return
     }
 
     // Validate required params
-    if (!code || !state) {
+    if (code === null || code === undefined || code === '' || state === null || state === undefined || state === '') {
       res.status(400).json({
         error: 'MISSING_PARAMS',
         message: 'Missing code or state parameter'

@@ -19,7 +19,7 @@ const envSchema = z.object({
   SALT_ROUNDS: z.coerce.number().min(10).max(15).default(12),
 
   /** Secreto simétrico para firmar y verificar JWTs */
-  JWT_SECRET: z.string().min(10, 'JWT_SECRET must be at least 10 characters').default(process.env.JWT_SECRET || 'petpay-default-secret-fallback'),
+  JWT_SECRET: z.string().min(10, 'JWT_SECRET must be at least 10 characters').default(process.env.JWT_SECRET ?? 'petpay-default-secret-fallback'),
 
   /** Tiempo de expiración del Access Token (ej. '15m', '1h') */
   ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
@@ -99,7 +99,24 @@ const envSchema = z.object({
   RATE_LIMIT_GENERAL_MAX: z.coerce.number().default(100),
 
   /** Ventana de tiempo para endpoints generales (en ms) */
-  RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60000)
+  RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60000),
+
+  // --- CONFIGURACIÓN DE CONCURRENCY ---
+
+  /** Número máximo de reintentos para transacciones con SERIALIZABLE isolation */
+  CONCURRENCY_MAX_RETRIES: z.coerce.number().default(3),
+
+  /** Retraso inicial en milisegundos entre reintentos */
+  CONCURRENCY_RETRY_DELAY_MS: z.coerce.number().default(100),
+
+  /** Factor de backoff exponencial para reintentos */
+  CONCURRENCY_BACKOFF_FACTOR: z.coerce.number().default(2),
+
+  /** Timeout en milisegundos para adquisición de advisory locks */
+  ADVISORY_LOCK_TIMEOUT_MS: z.coerce.number().default(5000),
+
+  /** Tamaño máximo del pool de conexiones */
+  POOL_MAX_SIZE: z.coerce.number().default(20)
 })
 
 /**
@@ -127,9 +144,9 @@ export function isOAuthEnabled (): boolean {
     return false
   }
 
-  const hasGoogle = !!(Config.GOOGLE_CLIENT_ID && Config.GOOGLE_CLIENT_SECRET && Config.GOOGLE_CALLBACK_URL)
-  const hasGitHub = !!(Config.GITHUB_CLIENT_ID && Config.GITHUB_CLIENT_SECRET && Config.GITHUB_CALLBACK_URL)
-  const hasStateSecret = !!(Config.OAUTH_STATE_SECRET && Config.OAUTH_STATE_SECRET.length >= 32)
+  const hasGoogle = Config.GOOGLE_CLIENT_ID !== undefined && Config.GOOGLE_CLIENT_SECRET !== undefined && Config.GOOGLE_CALLBACK_URL !== undefined
+  const hasGitHub = Config.GITHUB_CLIENT_ID !== undefined && Config.GITHUB_CLIENT_SECRET !== undefined && Config.GITHUB_CALLBACK_URL !== undefined
+  const hasStateSecret = Config.OAUTH_STATE_SECRET !== undefined && Config.OAUTH_STATE_SECRET.length >= 32
 
   return (hasGoogle || hasGitHub) && hasStateSecret
 }
@@ -147,9 +164,9 @@ export function isProviderConfigured (provider: 'google' | 'github'): boolean {
 
   switch (provider) {
     case 'google':
-      return !!(Config.GOOGLE_CLIENT_ID && Config.GOOGLE_CLIENT_SECRET && Config.GOOGLE_CALLBACK_URL)
+      return Config.GOOGLE_CLIENT_ID !== undefined && Config.GOOGLE_CLIENT_SECRET !== undefined && Config.GOOGLE_CALLBACK_URL !== undefined
     case 'github':
-      return !!(Config.GITHUB_CLIENT_ID && Config.GITHUB_CLIENT_SECRET && Config.GITHUB_CALLBACK_URL)
+      return Config.GITHUB_CLIENT_ID !== undefined && Config.GITHUB_CLIENT_SECRET !== undefined && Config.GITHUB_CALLBACK_URL !== undefined
     default:
       return false
   }

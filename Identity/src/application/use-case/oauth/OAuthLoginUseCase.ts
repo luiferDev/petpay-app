@@ -34,7 +34,7 @@ export interface OAuthLoginResponse {
     email: string
     firstName: string
     lastName: string
-    roles: Role[]
+    roles: Array<typeof Role>
     isVerified: boolean
   }
   accessToken: string
@@ -45,7 +45,7 @@ export interface OAuthLoginResponse {
  * @class OAuthLoginUseCase
  * @description Caso de uso para autenticar usuarios via OAuth.
  * Maneja el flujo completo: validar state, obtener tokens del proveedor,
- * obtener perfil de usuario, crear/vincular usuario, y generar JWT.
+ * obtener perfil de usuario, crear/vincular usuario, expiresAt: tokens.expiresIn ? new Date(Date.now() + tokens.expiresIn * 1000) : undefinedy generar JWT.
  */
 @injectable()
 export class OAuthLoginUseCase {
@@ -60,7 +60,7 @@ export class OAuthLoginUseCase {
     private readonly tokenProvider: ITokenService,
     @inject(INJECTION_TOKENS.OAUTH_STATE_MANAGER)
     private readonly stateManager: OAuthStateManager
-  ) {}
+  ) { }
 
   /**
    * @private
@@ -95,14 +95,18 @@ export class OAuthLoginUseCase {
     const oauthProvider = this.getOAuthProvider(request.provider)
 
     // 1. Validate state using OAuthStateManager
-    const validationResult = this.stateManager.validateState(request.state, request.cookieState || '')
+    const validationResult = this.stateManager.validateState(request.state, request?.cookieState ?? '')
 
     if (!validationResult.isValid) {
-      throw validationResult.error
+      const error = validationResult.error
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Invalid state validation')
     }
 
     // 2. Check timestamp expiration (10-minute window)
-    if (validationResult.payload && this.stateManager.isExpired(validationResult.payload.timestamp, STATE_MAX_AGE_MS)) {
+    if ((validationResult.payload != null) && this.stateManager.isExpired(validationResult.payload.timestamp, STATE_MAX_AGE_MS)) {
       throw new OAuthInvalidStateError('State parameter has expired')
     }
 
@@ -132,15 +136,19 @@ export class OAuthLoginUseCase {
     const user = await this.findOrCreateUser(profile, tokens)
 
     // 5. Generate JWT tokens
+    const userId = user.id
+    if (userId === null || userId === undefined) {
+      throw new Error('User ID is missing after save')
+    }
     const jwtTokens = this.tokenProvider.generateTokensForOAuthUser(
-      user.id!,
+      userId,
       user.email,
-      user.roles[0] || 'CLIENT'
+      (user.roles[0] != null) || 'CLIENT'
     )
 
     return {
       user: {
-        id: user.id!,
+        id: userId,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -172,7 +180,7 @@ export class OAuthLoginUseCase {
       await this.oauthUserRepository.updateTokens(existingOAuthRecord.id, {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresIn ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
+        expiresAt: tokens.expiresIn !== null && tokens.expiresIn !== undefined ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
       })
 
       // Get user
@@ -194,7 +202,7 @@ export class OAuthLoginUseCase {
         providerUserId: profile.providerId,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresIn ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
+        expiresAt: tokens.expiresIn !== null && tokens.expiresIn !== undefined ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
       })
 
       return existingUserByEmail
@@ -208,7 +216,7 @@ export class OAuthLoginUseCase {
       passwordHash,
       firstName: profile.displayName?.split(' ')[0] ?? profile.email.split('@')[0] ?? 'User',
       lastName: profile.displayName?.split(' ').slice(1).join(' ') ?? '',
-      roles: ['CLIENT'],
+      roles: [Role.CLIENT],
       isVerified: true // Email verified by OAuth provider
     })
 
@@ -222,7 +230,7 @@ export class OAuthLoginUseCase {
       providerUserId: profile.providerId,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
+      expiresAt: tokens.expiresIn !== null && tokens.expiresIn !== undefined ? new Date(Date.now() + tokens.expiresIn * 1000) : undefined
     })
 
     return savedUser

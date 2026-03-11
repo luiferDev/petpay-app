@@ -19,9 +19,19 @@ export class GitHubOAuthProvider implements IOAuthProvider {
       throw new Error('GitHub OAuth is not configured')
     }
 
-    this.clientId = Config.GITHUB_CLIENT_ID!
-    this.clientSecret = Config.GITHUB_CLIENT_SECRET!
-    this.callbackUrl = Config.GITHUB_CALLBACK_URL!
+    if (Config.GITHUB_CLIENT_ID === undefined || Config.GITHUB_CLIENT_ID === '') {
+      throw new Error('GITHUB_CLIENT_ID is not configured')
+    }
+    if (Config.GITHUB_CLIENT_SECRET === undefined || Config.GITHUB_CLIENT_SECRET === '') {
+      throw new Error('GITHUB_CLIENT_SECRET is not configured')
+    }
+    if (Config.GITHUB_CALLBACK_URL === undefined || Config.GITHUB_CALLBACK_URL === '') {
+      throw new Error('GITHUB_CALLBACK_URL is not configured')
+    }
+
+    this.clientId = Config.GITHUB_CLIENT_ID
+    this.clientSecret = Config.GITHUB_CLIENT_SECRET
+    this.callbackUrl = Config.GITHUB_CALLBACK_URL
   }
 
   /**
@@ -66,7 +76,7 @@ export class GitHubOAuthProvider implements IOAuthProvider {
       expires_in?: number
     }
 
-    if (!data.access_token) {
+    if (data.access_token === undefined || data.access_token === '') {
       throw new Error('Failed to obtain access token from GitHub')
     }
 
@@ -104,7 +114,7 @@ export class GitHubOAuthProvider implements IOAuthProvider {
 
     // If email is not public, fetch from emails endpoint
     let email = userData.email
-    if (!email) {
+    if (email === undefined || email === '') {
       const emailsResponse = await fetch(this.userEmailsApiUrl, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -123,7 +133,7 @@ export class GitHubOAuthProvider implements IOAuthProvider {
       }
     }
 
-    if (!email) {
+    if (email === undefined || email === '') {
       throw new Error('Could not obtain email from GitHub')
     }
 

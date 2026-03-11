@@ -12,7 +12,7 @@ export interface UserProps {
   firstName: string
   lastName: string
   phone?: string
-  roles: Role[]
+  roles: Array<typeof Role>
   isVerified: boolean
   createdAt?: Date
   updatedAt?: Date
@@ -34,7 +34,7 @@ export class User {
   public firstName: string
   public lastName: string
   public phone: string | undefined
-  public roles: Role[]
+  public roles: Array<typeof Role>
   public isVerified: boolean
   public readonly createdAt: Date | undefined
   public updatedAt: Date | undefined
@@ -92,7 +92,7 @@ export class User {
    * @param {Role} role - Rol a verificar.
    * @returns {boolean} True si el usuario tiene el rol.
    */
-  public hasRole (role: Role): boolean {
+  public hasRole (role: typeof Role): boolean {
     return this.roles.includes(role)
   }
 }

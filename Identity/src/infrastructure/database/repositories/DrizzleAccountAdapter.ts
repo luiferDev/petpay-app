@@ -8,9 +8,9 @@ import type { AccountType } from '../../../domain/types/AccountType'
 @injectable()
 @singleton()
 export class DrizzleAccountAdapter implements IAccountRepository {
-  constructor(@inject(INJECTION_TOKENS.DB_CLIENT) private readonly db: DbClient) {}
+  constructor (@inject(INJECTION_TOKENS.DB_CLIENT) private readonly db: DbClient) {}
 
-  async createAccountAndAssignOwner(
+  async createAccountAndAssignOwner (
     accountName: string,
     type: AccountType,
     userId: string
@@ -18,14 +18,14 @@ export class DrizzleAccountAdapter implements IAccountRepository {
     console.log('[DrizzleAccountAdapter] Creating account:', { accountName, type, userId })
     console.log('[DrizzleAccountAdapter] type value:', type, 'type enum:', AccountType.INDIVIDUAL)
     try {
-      return await this.db.transaction(async (tx) => {
+      return this.db.transaction(async (tx) => {
         console.log('[DrizzleAccountAdapter] Starting transaction...')
         const [newAccount] = await tx.insert(accounts)
           .values({ accountName, type })
           .returning()
         console.log('[DrizzleAccountAdapter] Account created:', newAccount)
 
-        if (!newAccount) throw new Error('Failed to create account')
+        if (newAccount === null || newAccount === undefined) throw new Error('Failed to create account')
 
         await tx.insert(accountUsers).values({
           accountId: newAccount.id,
