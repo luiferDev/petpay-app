@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: krakend
+  labels:
+    app: krakend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: krakend
+  template:
+    metadata:
+      labels:
+        app: krakend
+    spec:
+      containers:
+      - name: krakend
+        image: petpay/krakend:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        imagePullPolicy: Always
+        command: ["/usr/bin/krakend"]
+        args: 
+          - "run"
+          - "-d"
+          - "-c"
+          - "/etc/krakend/krakend.json"
+          - "-p"
+          - "8080"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE
+        env:
+        - name: KRAKEND_PORT
+          value: "8080"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: krakend-config
+          mountPath: /etc/krakend
+          readOnly: true
+      volumes:
+      - name: krakend-config
+        configMap:
+          name: krakend-config
