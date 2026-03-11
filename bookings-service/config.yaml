@@ -1,0 +1,13 @@
+app:
+  host: "0.0.0.0"
+  port: 8082
+
+database:
+  dsn: "postgresql://user:password@localhost:5432/petpay_bookings"
+
+rabbitmq:
+  url: "amqp://guest:guest@localhost:5672/"
+
+identity:
+  base_url: "http://identity:3000"
+  api_key: "service-token-key"
