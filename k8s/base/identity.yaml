@@ -58,6 +58,8 @@ spec:
                   name: petpay-secrets
                   key: JWT_SECRET
                   optional: true
+            - name: REDIS_URL
+              value: "redis://redis:6379"
           resources:
             requests:
               cpu: "100m"

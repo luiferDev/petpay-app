@@ -17,8 +17,10 @@ services:
       JWT_SECRET: ${JWT_SECRET_KEY}
       RABBITMQ_URL: ${RABBITMQ_URL}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET}
+      REDIS_URL: redis://redis:6379
     depends_on:
       - auth-db
+      - redis
     networks:
       - auth-net
     develop:
@@ -53,8 +55,20 @@ services:
     networks:
       - auth-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: auth-microservice-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - auth-net
+    command: redis-server --appendonly yes
+
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   auth-net:

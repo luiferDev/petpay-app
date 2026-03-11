@@ -10,6 +10,7 @@ resources:
   - configmaps.yaml
   - secrets.yaml
   - postgres.yaml
+  - redis.yaml
   - identity.yaml
   - marketplace.yaml
   - catalog.yaml
