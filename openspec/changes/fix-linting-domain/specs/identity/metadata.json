@@ -1,0 +1,18 @@
+{
+  "change": "fix-linting-domain",
+  "spec_version": "1.0",
+  "domain": "identity",
+  "created": "2026-03-11",
+  "requirements_summary": {
+    "no_redeclare": 3,
+    "no_unused_vars": 2,
+    "prefer_optional_chain": 1,
+    "strict_boolean_expressions": 1
+  },
+  "files_affected": [
+    "Identity/src/domain/types/AccountType.ts",
+    "Identity/src/domain/types/Role.ts",
+    "Identity/src/domain/repositories/IAccountRepository.ts",
+    "Identity/src/domain/entities/User.ts"
+  ]
+}

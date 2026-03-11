@@ -364,6 +364,111 @@ This service follows **Hexagonal Architecture** (Ports & Adapters):
 
 ---
 
+## Concurrency Patterns
+
+The Identity service implements several concurrency control mechanisms to prevent race conditions and ensure data consistency:
+
+### SERIALIZABLE Isolation Level
+
+**Purpose**: Prevent race conditions in critical operations like user registration.
+
+**Implementation**:
+- Transactions use PostgreSQL's SERIALIZABLE isolation level
+- Automatic retry logic with exponential backoff for serialization failures
+- Error code 40001 indicates serialization failure
+
+**Usage**:
+```typescript
+import { executeWithRetry, isSerializationError } from '../shared/utils/concurrency'
+
+const result = await executeWithRetry(
+  async () => {
+    return await this.db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`)
+      // Your transaction logic here
+    })
+  },
+  retryConfig,
+  isSerializationError
+)
+```
+
+**Configuration** (in `env.ts`):
+- `CONCURRENCY_MAX_RETRIES`: Maximum retry attempts (default: 3)
+- `CONCURRENCY_RETRY_DELAY_MS`: Initial delay in ms (default: 100)
+- `CONCURRENCY_BACKOFF_FACTOR`: Exponential backoff multiplier (default: 2)
+
+**Guidelines**:
+- Use SERIALIZABLE isolation for operations that modify shared resources
+- Always implement retry logic with exponential backoff
+- Handle unique constraint violations (error code 23505) gracefully
+- Log serialization failures for monitoring
+
+### Advisory Locks
+
+**Purpose**: Prevent concurrent access to critical sections (e.g., email verification).
+
+**Implementation**:
+- PostgreSQL advisory locks using `pg_advisory_lock` and `pg_advisory_unlock`
+- Deterministic lock key generation from resource identifier
+- Timeout configuration to prevent deadlocks
+
+**Usage**:
+```typescript
+import { withAdvisoryLock } from '../shared/utils/concurrency'
+
+// Calculate lock key (must be a 64-bit integer)
+const lockKey = calculateLockKey(userId)
+
+await withAdvisoryLock(
+  getDb(),
+  lockKey,
+  { timeoutMs: Config.ADVISORY_LOCK_TIMEOUT_MS },
+  async () => {
+    // Critical section: verify email
+    await user.markAsVerified()
+    await userRepository.save(user)
+  }
+)
+```
+
+**Configuration** (in `env.ts`):
+- `ADVISORY_LOCK_TIMEOUT_MS`: Lock timeout in milliseconds (default: 5000)
+
+**Guidelines**:
+- Use advisory locks for short critical sections (100ms - 2s)
+- Always release locks in `finally` blocks
+- Generate deterministic lock keys from resource identifiers
+- Handle lock timeout errors (HTTP 423 Locked response)
+
+### Connection Pool Optimization
+
+**Purpose**: Handle concurrent database requests efficiently.
+
+**Implementation**:
+- Configurable pool size based on expected load
+- Environment-based configuration (development vs production)
+
+**Configuration** (in `env.ts` and `client.ts`):
+- `POOL_MAX_SIZE`: Maximum pool connections (default: 20 dev, 100 prod)
+- Pool monitoring and logging for performance tuning
+
+**Guidelines**:
+- Set pool size to `max_concurrent_requests + buffer`
+- Monitor pool usage metrics in production
+- Adjust based on actual load patterns
+
+### Error Handling for Concurrency
+
+**Specific errors to handle**:
+- **23505**: Unique constraint violation → HTTP 409 Conflict
+- **40001**: Serialization failure → Retry with exponential backoff
+- **57014**: Lock timeout → HTTP 423 Locked
+
+**Domain errors**:
+- `UserAlreadyExistsError`: For unique constraint violations
+- `LockTimeoutError`: For advisory lock timeouts
+
 ## Error Handling
 
 ### Use Custom Domain Errors
