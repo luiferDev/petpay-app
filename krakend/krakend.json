@@ -1,10 +1,10 @@
 {
   "version": 3,
-  "name": "Petpay API Gateway",
+  "name": "Petpay API Gateway (Development)",
   
   "extra_config": {
     "telemetry/logging": {
-      "level": "INFO",
+      "level": "DEBUG",
       "stdout": true,
       "syslog": false
     },
@@ -12,8 +12,17 @@
       "disable_access_log": false
     },
     "qos/ratelimit/global": {
-      "max_rate": 5000,
-      "burst": 100
+      "max_rate": 10000,
+      "burst": 200
+    },
+    "auth/validator": {
+      "alg": "RS256",
+      "jwk_url": "http://identity:3000/.well-known/jwks.json",
+      "cache": true,
+      "cache_duration": 60,
+      "audience": ["petpay-api"],
+      "issuer": "petpay-identity",
+      "disable_jwk_security": true
     }
   },
 
