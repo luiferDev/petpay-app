@@ -23,6 +23,7 @@ export const INJECTION_TOKENS = {
   REGISTRATION_STRATEGIES: Symbol.for('RegistrationStrategiesMap'),
 
   // Servicios de Infraestructura
-  OAUTH_STATE_MANAGER: Symbol.for('OAuthStateManager')
+  OAUTH_STATE_MANAGER: Symbol.for('OAuthStateManager'),
+  REDIS_SERVICE: Symbol.for('IRedisService')
 
 } as const

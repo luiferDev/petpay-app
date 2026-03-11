@@ -56,11 +56,34 @@ export class UserAlreadyExistsError extends DomainError {
 
 /**
  * @class LockTimeoutError
- * @description Error lanzado cuando un advisory lock no puede ser adquirido dentro del timeout.
+ * @description Error thrown when an advisory lock cannot be acquired within the timeout.
  */
 export class LockTimeoutError extends DomainError {
   constructor (message: string = 'Lock timeout: Could not acquire lock') {
     super(message, 423, 'LockTimeoutError')
     Object.setPrototypeOf(this, LockTimeoutError.prototype)
+  }
+}
+
+/**
+ * @class TokenNotFoundError
+ * @description Error thrown when a refresh token is not found in Redis
+ * (e.g., already used, revoked, or expired).
+ */
+export class TokenNotFoundError extends DomainError {
+  constructor (message: string = 'Refresh token not found or already used') {
+    super(message, 401, 'TokenNotFoundError')
+    Object.setPrototypeOf(this, TokenNotFoundError.prototype)
+  }
+}
+
+/**
+ * @class InvalidTokenError
+ * @description Error thrown when a refresh token is malformed or invalid.
+ */
+export class InvalidTokenError extends DomainError {
+  constructor (message: string = 'Invalid refresh token') {
+    super(message, 401, 'InvalidTokenError')
+    Object.setPrototypeOf(this, InvalidTokenError.prototype)
   }
 }

@@ -16,7 +16,10 @@ import { INJECTION_TOKENS } from './InjectionTokens'
 import { ITokenService } from '../../application/ports/ITokenService'
 import { IAccountRepository } from '../../domain/repositories/IAccountRepository'
 import { JwtTokenProvider } from '../services/JwtTokenProvider'
+import { RedisService } from '../services/RedisService'
 import { LoginUseCase } from '../../application/use-case/auth/LoginUseCase'
+import { RefreshTokenUseCase } from '../../application/use-case/auth/RefreshTokenUseCase'
+import { LogoutUseCase } from '../../application/use-case/auth/LogoutUseCase'
 import { NodemailerService } from '../services/NodemailerService'
 import { OAuthLoginUseCase } from '../../application/use-case/oauth/OAuthLoginUseCase'
 import { OAuthUserAdapter } from '../database/repositories/OAuthUserAdapter'
@@ -87,6 +90,24 @@ export function setupDI (): void {
   container.register<ITokenService>(
     INJECTION_TOKENS.TOKEN_PROVIDER,
     { useClass: JwtTokenProvider }
+  )
+
+  // Redis Service: For refresh token storage
+  container.register(
+    INJECTION_TOKENS.REDIS_SERVICE,
+    { useClass: RedisService }
+  )
+
+  // Refresh Token Use Case
+  container.register(
+    'RefreshTokenUseCase',
+    { useClass: RefreshTokenUseCase }
+  )
+
+  // Logout Use Case
+  container.register(
+    'LogoutUseCase',
+    { useClass: LogoutUseCase }
   )
 
   // Event Publisher - using console publisher (RabbitMQ optional)

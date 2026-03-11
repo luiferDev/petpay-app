@@ -5,9 +5,37 @@ import { DomainError, UserNotFoundError } from '../../../domain/errors/DomainErr
 import { LoginRequest, LoginResponse } from '../../dtos/LoginDTOs' // DTOs que se definen en el siguiente paso
 
 import { ITokenService } from '../../ports/ITokenService'
+import { IRedisService } from '../../ports/IRedisService'
 import { IUserRepository } from '../../../domain/repositories/IUserRepository'
 import { compare } from 'bcrypt'
 import { INJECTION_TOKENS } from '../../../infrastructure/DI/InjectionTokens'
+import { Config } from '../../../infrastructure/config/env'
+import { logger } from '../../../shared/utils/logger'
+
+const REFRESH_TOKEN_KEY_PREFIX = 'refresh_token'
+
+function parseExpiryToSeconds (expiry: string): number {
+  const match = expiry.match(/^(\d+)([smhd])$/)
+  if (match === null) {
+    return 7 * 24 * 60 * 60
+  }
+
+  const value = parseInt(match[1], 10)
+  const unit = match[2]
+
+  switch (unit) {
+    case 's':
+      return value
+    case 'm':
+      return value * 60
+    case 'h':
+      return value * 60 * 60
+    case 'd':
+      return value * 24 * 60 * 60
+    default:
+      return 7 * 24 * 60 * 60
+  }
+}
 
 /**
  * @class LoginUseCase
@@ -22,7 +50,9 @@ export class LoginUseCase {
     @inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @inject(INJECTION_TOKENS.TOKEN_PROVIDER)
-    private readonly tokenProvider: ITokenService
+    private readonly tokenProvider: ITokenService,
+    @inject(INJECTION_TOKENS.REDIS_SERVICE)
+    private readonly redisService: IRedisService
   ) { }
 
   /**
@@ -60,9 +90,27 @@ export class LoginUseCase {
     }
 
     // 4. Generar Tokens (ITokenProvider)
-    const { accessToken, refreshToken } = this.tokenProvider.generateTokens(user)
+    const tokens = this.tokenProvider.generateTokensWithTokenId(user)
+    const { accessToken, refreshToken } = tokens
+    const tokenId: string | undefined = tokens.tokenId
 
-    // 5. Retornar Respuesta (DTO)
+    // 5. Store refresh token in Redis (if Redis is available)
+    const userId = user.id
+    if (userId !== undefined && userId !== null && tokenId !== undefined && tokenId !== null) {
+      try {
+        const ttlSeconds = parseExpiryToSeconds(Config.REFRESH_TOKEN_EXPIRY)
+        const redisKey = `${REFRESH_TOKEN_KEY_PREFIX}:${String(userId)}:${String(tokenId)}`
+        await this.redisService.set(redisKey, refreshToken, ttlSeconds)
+        logger.debug('Refresh token stored in Redis', { userId, tokenId })
+      } catch (error) {
+        logger.warn('Failed to store refresh token in Redis (continuing anyway)', {
+          userId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    // 6. Retornar Respuesta (DTO)
     return {
       user: {
         id: user.id,

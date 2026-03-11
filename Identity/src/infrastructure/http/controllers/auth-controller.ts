@@ -7,10 +7,13 @@ import { DomainError, UserNotFoundError } from '../../../domain/errors/DomainErr
 import { LoginRequest } from '../../../application/dtos/LoginDTOs'
 import { RegisterUserUseCase } from '../../../application/use-case/auth/RegisterUserUseCase'
 import { LoginUseCase } from '../../../application/use-case/auth/LoginUseCase'
+import { RefreshTokenUseCase } from '../../../application/use-case/auth/RefreshTokenUseCase'
+import { LogoutUseCase } from '../../../application/use-case/auth/LogoutUseCase'
 import { RegisterUserRequest } from '../../../application/dtos/RegisterUser.dto'
 import { Role } from '../../../domain/types/Role'
 import { INJECTION_TOKENS } from '../../DI/InjectionTokens'
 import { userRegisterSchema } from '../validation/zod-schemas/register-schema'
+import { refreshTokenSchema } from '../validation/zod-schemas/refresh-schema'
 import { ZodError } from 'zod'
 import { withAdvisoryLock } from '../../../shared/utils/concurrency'
 import { Config } from '../../config/env'
@@ -27,7 +30,9 @@ import { getDb } from '../../database/drizzle/client'
 export class AuthController {
   constructor (
     private readonly registerUseCase: RegisterUserUseCase,
-    private readonly loginUseCase: LoginUseCase
+    private readonly loginUseCase: LoginUseCase,
+    private readonly refreshTokenUseCase: RefreshTokenUseCase,
+    private readonly logoutUseCase: LogoutUseCase
   ) { }
 
   /**
@@ -313,5 +318,96 @@ export class AuthController {
       hash = hash & hash // Convert to 32-bit integer
     }
     return hash
+  }
+
+  /**
+   * Endpoint POST /refresh
+   * Intercambia un refresh token válido por nuevos tokens.
+   * Implementa token rotation.
+   * @param {Request} req - Contiene el refresh token.
+   */
+  refresh = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const validatedData = refreshTokenSchema.parse(req.body)
+
+      const result = await this.refreshTokenUseCase.execute({
+        refreshToken: validatedData.refreshToken
+      })
+
+      return res.status(200).json({
+        status: 200,
+        data: result
+      })
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          status: 400,
+          error: 'Validation Error',
+          message: 'Invalid request data',
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        })
+      }
+
+      if (error instanceof DomainError) {
+        return res.status(error.suggestedHttpCode).json({
+          status: error.suggestedHttpCode,
+          message: error.message,
+          error: error.name
+        })
+      }
+
+      logger.error('Error during token refresh', { error })
+      return res.status(500).json({
+        status: 500,
+        message: 'Internal Server Error'
+      })
+    }
+  }
+
+  /**
+   * Endpoint POST /logout
+   * Invalida el refresh token del usuario.
+   * @param {Request} req - Contiene el refresh token (opcional, puede estar en cookie).
+   */
+  logout = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const refreshToken = req.body.refreshToken ?? req.cookies?.refresh_token
+
+      if (refreshToken === null || refreshToken === undefined || refreshToken === '') {
+        // Even without token, return success (idempotent)
+        return res.status(200).json({
+          status: 200,
+          message: 'Logged out successfully'
+        })
+      }
+
+      await this.logoutUseCase.execute({ refreshToken })
+
+      // Clear cookies
+      res.clearCookie('access_token')
+      res.clearCookie('refresh_token')
+
+      return res.status(200).json({
+        status: 200,
+        message: 'Logged out successfully'
+      })
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(error.suggestedHttpCode).json({
+          status: error.suggestedHttpCode,
+          message: error.message,
+          error: error.name
+        })
+      }
+
+      logger.error('Error during logout', { error })
+      return res.status(500).json({
+        status: 500,
+        message: 'Internal Server Error'
+      })
+    }
   }
 }

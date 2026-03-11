@@ -13,6 +13,8 @@ const getAuthController = (): AuthController => container.resolve(AuthController
 // Rutas
 router.post('/register', async (req: Request, res: Response) => await getAuthController().register(req, res))
 router.post('/login', async (req: Request, res: Response) => await getAuthController().login(req, res))
+router.post('/refresh', async (req: Request, res: Response) => await getAuthController().refresh(req, res))
+router.post('/logout', async (req: Request, res: Response) => await getAuthController().logout(req, res))
 router.get('/verify-email/:userId', async (req: Request, res: Response) => await getAuthController().verifyEmail(req, res))
 router.post('/register/:role', async (req: Request, res: Response) => await getAuthController().registerByRole(req, res))
 

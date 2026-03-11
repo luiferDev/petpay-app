@@ -1,8 +1,9 @@
 import * as jwt from 'jsonwebtoken'
 import { SignOptions, VerifyOptions } from 'jsonwebtoken'
+import { randomUUID } from 'crypto'
 import { User } from '../../domain/entities/User'
 import { Role } from '../../domain/types/Role'
-import { ITokenService } from '../../application/ports/ITokenService'
+import { ITokenService, TokenPayload } from '../../application/ports/ITokenService'
 import { Config } from '../config/env'
 import { injectable, singleton } from 'tsyringe'
 
@@ -10,6 +11,16 @@ export const TOKENS = {
   Database: Symbol('Database'),
   Transport: Symbol('Transport')
 } as const
+
+interface AccessTokenPayload {
+  id: number
+  email: string
+  role: Role
+}
+
+interface RefreshTokenPayload extends AccessTokenPayload {
+  jti: string
+}
 
 /**
  * @class JwtTokenProvider
@@ -29,27 +40,68 @@ export class JwtTokenProvider implements ITokenService {
     this.refreshTokenExpiry = Config.REFRESH_TOKEN_EXPIRY
   }
 
+  private generateTokenId (): string {
+    return randomUUID()
+  }
+
   /**
    * {@inheritDoc}
    */
   generateTokens (user: User): { accessToken: string, refreshToken: string } {
-    const payload = {
+    const tokenId: string = this.generateTokenId()
+
+    const accessPayload: AccessTokenPayload = {
       id: user.id,
       email: user.email,
-      role: (user.roles[0] != null) ?? Role.CLIENT
+      role: (user.roles[0] != null) ? user.roles[0] : Role.CLIENT
+    }
+
+    const refreshPayload: RefreshTokenPayload = {
+      ...accessPayload,
+      jti: tokenId
     }
 
     const accessTokenOptions: SignOptions = {
       expiresIn: this.accessTokenExpiry
     }
-    const accessToken = jwt.sign(payload, this.jwtSecret, accessTokenOptions)
+    const accessToken = jwt.sign(accessPayload, this.jwtSecret, accessTokenOptions)
 
     const refreshTokenOptions: SignOptions = {
       expiresIn: this.refreshTokenExpiry
     }
-    const refreshToken = jwt.sign(payload, this.jwtSecret, refreshTokenOptions)
+    const refreshToken = jwt.sign(refreshPayload, this.jwtSecret, refreshTokenOptions)
 
     return { accessToken, refreshToken }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  generateTokensWithTokenId (user: User): { accessToken: string, refreshToken: string, tokenId: string } {
+    const tokenId: string = this.generateTokenId()
+
+    const accessPayload: AccessTokenPayload = {
+      id: user.id,
+      email: user.email,
+      role: (user.roles[0] != null) ? user.roles[0] : Role.CLIENT
+    }
+
+    const refreshPayload: RefreshTokenPayload = {
+      ...accessPayload,
+      jti: tokenId
+    }
+
+    const accessTokenOptions: SignOptions = {
+      expiresIn: this.accessTokenExpiry
+    }
+    const accessToken = jwt.sign(accessPayload, this.jwtSecret, accessTokenOptions)
+
+    const refreshTokenOptions: SignOptions = {
+      expiresIn: this.refreshTokenExpiry
+    }
+    const refreshToken = jwt.sign(refreshPayload, this.jwtSecret, refreshTokenOptions)
+
+    return { accessToken, refreshToken, tokenId }
   }
 
   /**
@@ -60,21 +112,28 @@ export class JwtTokenProvider implements ITokenService {
     email: string,
     role: Role
   ): { accessToken: string, refreshToken: string } {
-    const payload = {
-      id: userId,
+    const tokenId: string = this.generateTokenId()
+
+    const accessPayload: AccessTokenPayload = {
+      id: Number(userId),
       email,
       role
+    }
+
+    const refreshPayload: RefreshTokenPayload = {
+      ...accessPayload,
+      jti: tokenId
     }
 
     const accessTokenOptions: SignOptions = {
       expiresIn: this.accessTokenExpiry
     }
-    const accessToken = jwt.sign(payload, this.jwtSecret, accessTokenOptions)
+    const accessToken = jwt.sign(accessPayload, this.jwtSecret, accessTokenOptions)
 
     const refreshTokenOptions: SignOptions = {
       expiresIn: this.refreshTokenExpiry
     }
-    const refreshToken = jwt.sign(payload, this.jwtSecret, refreshTokenOptions)
+    const refreshToken = jwt.sign(refreshPayload, this.jwtSecret, refreshTokenOptions)
 
     return { accessToken, refreshToken }
   }
@@ -82,11 +141,66 @@ export class JwtTokenProvider implements ITokenService {
   /**
    * {@inheritDoc}
    */
-  verifyToken (token: string): any {
+  generateTokensWithTokenIdForOAuthUser (
+    userId: string,
+    email: string,
+    role: Role
+  ): { accessToken: string, refreshToken: string, tokenId: string } {
+    const tokenId: string = this.generateTokenId()
+
+    const accessPayload: AccessTokenPayload = {
+      id: Number(userId),
+      email,
+      role
+    }
+
+    const refreshPayload: RefreshTokenPayload = {
+      ...accessPayload,
+      jti: tokenId
+    }
+
+    const accessTokenOptions: SignOptions = {
+      expiresIn: this.accessTokenExpiry
+    }
+    const accessToken = jwt.sign(accessPayload, this.jwtSecret, accessTokenOptions)
+
+    const refreshTokenOptions: SignOptions = {
+      expiresIn: this.refreshTokenExpiry
+    }
+    const refreshToken = jwt.sign(refreshPayload, this.jwtSecret, refreshTokenOptions)
+
+    return { accessToken, refreshToken, tokenId }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  verifyToken (token: string): TokenPayload {
     const options: VerifyOptions = {
       algorithms: ['HS256']
     }
-    return jwt.verify(token, this.jwtSecret, options)
+    const payload = jwt.verify(token, this.jwtSecret, options) as AccessTokenPayload
+    return {
+      id: payload.id,
+      email: payload.email,
+      role: payload.role
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  verifyRefreshToken (token: string): TokenPayload {
+    const options: VerifyOptions = {
+      algorithms: ['HS256']
+    }
+    const payload = jwt.verify(token, this.jwtSecret, options) as RefreshTokenPayload
+    return {
+      id: payload.id,
+      email: payload.email,
+      role: payload.role,
+      tokenId: payload.jti
+    }
   }
 
   /**

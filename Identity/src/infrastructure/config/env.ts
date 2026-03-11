@@ -116,7 +116,24 @@ const envSchema = z.object({
   ADVISORY_LOCK_TIMEOUT_MS: z.coerce.number().default(5000),
 
   /** Tamaño máximo del pool de conexiones */
-  POOL_MAX_SIZE: z.coerce.number().default(20)
+  POOL_MAX_SIZE: z.coerce.number().default(20),
+
+  // --- CONFIGURACIÓN DE REDIS ---
+
+  /** URL de conexión a Redis para refresh tokens */
+  REDIS_URL: z.string().optional(),
+
+  /** Host de Redis (si no se usa REDIS_URL) */
+  REDIS_HOST: z.string().default('localhost'),
+
+  /** Puerto de Redis */
+  REDIS_PORT: z.coerce.number().default(6379),
+
+  /** Password de Redis (opcional) */
+  REDIS_PASSWORD: z.string().optional(),
+
+  /** Número de base de datos de Redis */
+  REDIS_DB: z.coerce.number().default(0)
 })
 
 /**
