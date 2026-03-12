@@ -20,6 +20,15 @@ data:
         "qos/ratelimit/global": {
           "max_rate": 5000,
           "burst": 100
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://identity:3000/.well-known/jwks.json",
+          "cache": true,
+          "cache_duration": 900,
+          "audience": ["petpay-api"],
+          "issuer": "petpay-identity",
+          "disable_jwk_security": true
         }
       },
 
@@ -55,17 +64,27 @@ data:
           ]
         },
         {
-          "endpoint": "/api/v1/users/profile",
+          "endpoint": "/api/v1/auth/logout",
+          "method": "POST",
+          "backend": [
+            {
+              "url_pattern": "/api/v1/auth/logout",
+              "host": ["http://identity:3000"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/v1/auth/users",
           "method": "GET",
           "extra_config": {
             "auth/validator": {
               "roles_key": "roles",
-              "roles": ["user", "admin", "service_provider"]
+              "roles": ["admin"]
             }
           },
           "backend": [
             {
-              "url_pattern": "/api/v1/users/profile",
+              "url_pattern": "/api/v1/auth/users",
               "host": ["http://identity:3000"]
             }
           ]
@@ -119,8 +138,56 @@ data:
           ]
         },
         {
+          "endpoint": "/api/v1/bookings/{id}/status",
+          "method": "PATCH",
+          "extra_config": {
+            "auth/validator": {
+              "roles_key": "roles",
+              "roles": ["service_provider", "admin"]
+            }
+          },
+          "backend": [
+            {
+              "url_pattern": "/api/v1/bookings/{id}/status",
+              "host": ["http://bookings:8082"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/v1/bookings/{id}",
+          "method": "DELETE",
+          "extra_config": {
+            "auth/validator": {
+              "roles_key": "roles",
+              "roles": ["user", "admin"]
+            }
+          },
+          "backend": [
+            {
+              "url_pattern": "/api/v1/bookings/{id}",
+              "host": ["http://bookings:8082"]
+            }
+          ]
+        },
+        {
           "endpoint": "/api/v1/orders",
           "method": "GET",
+          "extra_config": {
+            "auth/validator": {
+              "roles_key": "roles",
+              "roles": ["user", "admin"]
+            }
+          },
+          "backend": [
+            {
+              "url_pattern": "/api/v1/orders",
+              "host": ["http://marketplace:8080"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/v1/orders",
+          "method": "POST",
           "extra_config": {
             "auth/validator": {
               "roles_key": "roles",
@@ -155,11 +222,11 @@ data:
           ]
         },
         {
-          "endpoint": "/health",
+          "endpoint": "/api/v1/health",
           "method": "GET",
           "backend": [
             {
-              "url_pattern": "/health",
+              "url_pattern": "/api/v1/health",
               "host": ["http://identity:3000"]
             }
           ]
