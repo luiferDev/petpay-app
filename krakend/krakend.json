@@ -68,39 +68,7 @@
       ]
     },
     {
-      "endpoint": "/api/v1/users/profile",
-      "method": "GET",
-      "extra_config": {
-        "auth/validator": {
-          "roles_key": "roles",
-          "roles": ["user", "admin", "service_provider"]
-        }
-      },
-      "backend": [
-        {
-          "url_pattern": "/api/v1/users/profile",
-          "host": ["http://identity:3000"]
-        }
-      ]
-    },
-    {
-      "endpoint": "/api/v1/users/profile",
-      "method": "PATCH",
-      "extra_config": {
-        "auth/validator": {
-          "roles_key": "roles",
-          "roles": ["user", "admin", "service_provider"]
-        }
-      },
-      "backend": [
-        {
-          "url_pattern": "/api/v1/users/profile",
-          "host": ["http://identity:3000"]
-        }
-      ]
-    },
-    {
-      "endpoint": "/api/v1/users",
+      "endpoint": "/api/v1/auth/users",
       "method": "GET",
       "extra_config": {
         "auth/validator": {
@@ -110,7 +78,7 @@
       },
       "backend": [
         {
-          "url_pattern": "/api/v1/users",
+          "url_pattern": "/api/v1/auth/users",
           "host": ["http://identity:3000"]
         }
       ]
@@ -328,11 +296,11 @@
       ]
     },
     {
-      "endpoint": "/health",
+      "endpoint": "/api/v1/health",
       "method": "GET",
       "backend": [
         {
-          "url_pattern": "/health",
+          "url_pattern": "/api/v1/health",
           "host": ["http://identity:3000"]
         }
       ]

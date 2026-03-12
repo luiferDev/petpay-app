@@ -35,13 +35,17 @@ app.get('/', generalRateLimiter, (req, res) => {
   res.send('¡Hola desde Express y Bun! 🚀')
 })
 
-// Health check endpoint
+// Health check endpoint (también disponible en /api/v1/health para consistencia)
 app.get('/health', generalRateLimiter, (req, res) => {
   res.json({ status: 'healthy', service: 'identity' })
 })
 
-// Rutas de autenticación con rate limiting
-app.use('/auth', authRateLimiter, authRouter)
+app.get('/api/v1/health', generalRateLimiter, (req, res) => {
+  res.json({ status: 'healthy', service: 'identity' })
+})
+
+// Rutas de autenticación con rate limiting (con prefijo /api/v1)
+app.use('/api/v1/auth', authRateLimiter, authRouter)
 
 // OAuth routes temporarily disabled for debugging
 // app.use('/auth/oauth', oauthRateLimiter, oauthRouter)

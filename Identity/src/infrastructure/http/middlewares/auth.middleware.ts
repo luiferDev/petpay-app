@@ -8,18 +8,35 @@ import { logger } from '../../../shared/utils/logger'
 const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'secret'
 
 /**
+ * Extrae el token JWT de la cookie o del header Authorization.
+ * @param req Objeto de solicitud de Express
+ * @returns El token JWT o undefined si no se encuentra
+ */
+function extractToken(req: Request): string | undefined {
+  // 1. Primero intentar obtener del header Authorization (Bearer token)
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7)
+  }
+
+  // 2. Si no hay Bearer, intentar de la cookie
+  return req.cookies?.access_token
+}
+
+/**
  * Middleware para verificar la validez del token JWT y adjuntar los datos del usuario a la Request.
+ * Acepta tokens tanto de cookies como del header Authorization (Bearer token).
  * @param req Objeto de solicitud de Express
  * @param res Objeto de respuesta de Express
  * @param next Función para pasar al siguiente middleware/controlador
  */
 export const protect = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    // 1. Obtener el token de la cookie (asumimos que se usa cookie httponly)
-    const token: string | undefined = req.cookies?.access_token
+    // 1. Extraer token de cookie o header Authorization
+    const token = extractToken(req)
 
     if (token === null || token === undefined || token === '') {
-      logger.warn('Acceso denegado: No se encontró token en cookies.')
+      logger.warn('Acceso denegado: No se encontró token en cookies ni en Authorization header.')
       return res.status(401).json({ message: 'Acceso no autorizado. Token no proporcionado.' })
     }
 
