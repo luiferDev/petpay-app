@@ -10,9 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var Model *gorm.DB
-
-func DBConnection() {
+func NewPostgresConnection() (*gorm.DB, error) {
 	// Load .env file
 	if err := godotenv.Load("./.env"); err != nil {
 		log.Println("No .env file found, using default values")
@@ -29,18 +27,16 @@ func DBConnection() {
 	// Build DSN
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		host, user, password, dbname, port, sslmode)
-	
+
 	log.Printf("Connecting to: host=%s user=%s dbname=%s port=%s", host, user, dbname, port)
 
-	var err error
-	Model, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		log.Printf("DSN used: %s", dsn)
-		log.Fatal("failed to connect database")
-	} else {
-		log.Println("connected to database")
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	log.Println("Database connection established")
+	return db, nil
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

@@ -51,8 +51,11 @@ func (m *MockProductRepository) Delete(id uint) error {
 	return args.Error(0)
 }
 
-func (m *MockProductRepository) FindByCategory(category string) ([]*core.Product, error) {
-	args := m.Called(category)
+func (m *MockProductRepository) FindByCategory(categoryId uint64) ([]*core.Product, error) {
+	args := m.Called(categoryId)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]*core.Product), args.Error(1)
 }
 
@@ -172,9 +175,9 @@ func TestFindProductsByCategory(t *testing.T) {
 		{Model: gorm.Model{ID: 2}, Name: "Product 2", CategoryId: 1},
 	}
 
-	mockRepo.On("FindByCategory", "electronics").Return(products, nil)
+	mockRepo.On("FindByCategory", uint64(1)).Return(products, nil)
 
-	result, err := adapter.FindProductsByCategory("electronics")
+	result, err := adapter.FindProductsByCategory(uint64(1))
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
