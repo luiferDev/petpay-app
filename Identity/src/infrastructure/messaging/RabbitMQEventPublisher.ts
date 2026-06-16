@@ -1,5 +1,3 @@
-// src/infrastructure/messaging/RabbitMQEventPublisher.ts
-
 import * as amqp from 'amqplib'
 
 import { Config } from '../config/env'
@@ -7,65 +5,97 @@ import { IEventPublisher } from '../../application/ports/IEventPublisher'
 import { injectable } from 'tsyringe'
 import { logger } from '../../shared/utils/logger'
 
-/**
- * Nombre del Topic Exchange para eventos de dominio (estandarizado en la arquitectura).
- */
-const DOMAIN_EVENTS_EXCHANGE = 'petpay.domain.events'
+const DOMAIN_EVENTS_EXCHANGE = Config.RABBITMQ_EXCHANGE || 'petpay.domain.events'
+const DLX_EXCHANGE = DOMAIN_EVENTS_EXCHANGE + '.dlx'
 
-/**
- * @class RabbitMQEventPublisher
- * @implements {IEventPublisher}
- * @description Adaptador para la publicación de eventos de dominio a RabbitMQ.
- * Utiliza un Topic Exchange para comunicación asíncrona entre microservicios.
- * @author Petpay Architecture Team
- * @version 1.0
- */
 @injectable()
 export class RabbitMQEventPublisher implements IEventPublisher {
   private connection: amqp.Connection | null = null
   private channel: amqp.Channel | null = null
+  private connecting: boolean = false
+  private shouldReconnect: boolean = true
+
+  private baseDelay: number = 1000
+  private maxDelay: number = 30000
 
   constructor () {
     void this.initializeConnection()
   }
 
-  /**
-   * @private
-   * Establece la conexión inicial a RabbitMQ y asegura el Topic Exchange.
-   */
+  public get isConnected (): boolean {
+    return this.channel !== null && this.connection !== null
+  }
+
+  private async reconnect (): Promise<void> {
+    if (this.connecting) return
+    this.connecting = true
+
+    let delay = this.baseDelay
+    while (this.shouldReconnect) {
+      try {
+        logger.info(`Attempting to reconnect to RabbitMQ in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        await this.initializeConnection()
+        logger.info('RabbitMQ reconnected successfully')
+        return
+      } catch (error) {
+        logger.error('RabbitMQ reconnection failed', {
+          error: error instanceof Error ? error.message : String(error),
+          nextRetryInMs: Math.min(delay * 2, this.maxDelay)
+        })
+        delay = Math.min(delay * 2, this.maxDelay)
+      }
+    }
+  }
+
   private async initializeConnection (): Promise<void> {
     try {
       logger.info('Attempting to connect to RabbitMQ...')
       const conn = await amqp.connect(Config.RABBITMQ_URL)
       this.connection = conn as unknown as amqp.Connection
 
-      // Manejar errores de conexión (ej. reconexión, logging)
       conn.on('error', (err: any) => {
-        logger.error('RabbitMQ connection error. Implement reconnection logic here.', { error: err.message })
+        logger.error('RabbitMQ connection error', { error: err.message })
+        this.channel = null
+        if (this.shouldReconnect) {
+          void this.reconnect()
+        }
+      })
+
+      conn.on('close', () => {
+        logger.warn('RabbitMQ connection closed')
+        this.channel = null
+        this.connection = null
+        if (this.shouldReconnect) {
+          void this.reconnect()
+        }
       })
 
       this.channel = await conn.createChannel()
 
-      // Declarar exchange como Topic para asegurar que exista (durable: true)
+      await this.channel.assertExchange(DLX_EXCHANGE, 'fanout', { durable: true })
+
       await this.channel.assertExchange(DOMAIN_EVENTS_EXCHANGE, 'topic', {
-        durable: true
+        durable: true,
+        arguments: { 'x-dead-letter-exchange': DLX_EXCHANGE }
       })
 
-      logger.info('✅ RabbitMQ connection established and exchange asserted.', {
-        exchange: DOMAIN_EVENTS_EXCHANGE
+      logger.info('RabbitMQ connection established and exchanges asserted.', {
+        exchange: DOMAIN_EVENTS_EXCHANGE,
+        dlx: DLX_EXCHANGE
       })
     } catch (error) {
-      logger.error('❌ Failed to connect to RabbitMQ. Events will not be published.', {
+      this.channel = null
+      logger.error('Failed to connect to RabbitMQ. Events will not be published.', {
         url: Config.RABBITMQ_URL,
         error: error instanceof Error ? error.message : String(error)
       })
-      // Si falla, el canal queda en null, permitiendo la degradación controlada.
+      throw error
+    } finally {
+      this.connecting = false
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public async publish (routingKey: string, event: any): Promise<void> {
     if (this.channel == null) {
       logger.warn(`Cannot publish event: RabbitMQ channel not initialized. Event: ${routingKey}`)
@@ -83,29 +113,32 @@ export class RabbitMQEventPublisher implements IEventPublisher {
         routingKey,
         Buffer.from(message),
         {
-          persistent: true, // Mensaje persistente en disco
+          persistent: true,
           contentType: 'application/json',
           timestamp: Date.now()
         }
       )
 
-      logger.debug(`📤 Event published: ${routingKey}`, { payload: event })
+      logger.debug(`Event published: ${routingKey}`, { payload: event })
     } catch (error) {
-      logger.error('❌ Error publishing event to RabbitMQ', {
+      logger.error('Error publishing event to RabbitMQ', {
         routingKey,
         error: error instanceof Error ? error.message : String(error)
       })
-      // El Use Case no debe esperar esto; solo se registra el error.
     }
   }
 
-  /**
-   * Cierra la conexión a RabbitMQ durante el cierre del servidor.
-   */
   public async close (): Promise<void> {
-    if (this.connection != null) {
-      await this.connection.close()
-      logger.info('✅ RabbitMQ connection closed.')
+    this.shouldReconnect = false
+    this.connecting = false
+    if (this.channel != null) {
+      try { await this.channel.close() } catch {}
+      this.channel = null
     }
+    if (this.connection != null) {
+      try { await this.connection.close() } catch {}
+      this.connection = null
+    }
+    logger.info('RabbitMQ connection closed.')
   }
 }
