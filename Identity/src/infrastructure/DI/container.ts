@@ -25,23 +25,11 @@ import { OAuthLoginUseCase } from '../../application/use-case/oauth/OAuthLoginUs
 import { OAuthUserAdapter } from '../database/repositories/OAuthUserAdapter'
 import { LinkOAuthProviderUseCase } from '../../application/use-case/oauth/LinkOAuthProviderUseCase'
 import { OAuthStateManager } from '../services/OAuthStateManager'
+import { RabbitMQEventPublisher } from '../messaging/RabbitMQEventPublisher'
 import { RegisterUserUseCase } from '../../application/use-case/auth/RegisterUserUseCase'
 import { IRegistrationStrategy } from '../../application/ports/IRegistrationStrategy'
 import { ClientRegistrationStrategy, ServiceProviderRegistrationStrategy } from '../../application/strategies/registration/UserRegisterStrategy'
 import { AdminRegistrationStrategy } from '../../application/strategies/registration/AdminRegistrationStrategy'
-
-// Simple console event publisher (no RabbitMQ dependency)
-const consoleEventPublisher = {
-  publish: async (event: string, payload: unknown): Promise<void> => {
-    console.log(`[EVENT] ${event}:`, payload)
-  },
-  subscribe: async (event: string, _handler: (payload: unknown) => Promise<void>): Promise<void> => {
-    console.log(`[SUBSCRIBE] ${event}`)
-  },
-  close: async (): Promise<void> => {
-    console.log('[EVENT PUBLISHER] Closed')
-  }
-}
 
 // --- INJECTION TOKENS ---
 // (Defined in InjectionTokens.ts - imported above)
@@ -110,10 +98,10 @@ export function setupDI (): void {
     { useClass: LogoutUseCase }
   )
 
-  // Event Publisher - using console publisher (RabbitMQ optional)
-  container.registerInstance<IEventPublisher>(
+  // Event Publisher - RabbitMQ for async domain events
+  container.register(
     INJECTION_TOKENS.EVENT_PUBLISHER,
-    consoleEventPublisher
+    { useClass: RabbitMQEventPublisher }
   )
 
   // Email Service: Mapea IEmailService (App Port) a NodemailerService (Infra Adapter)

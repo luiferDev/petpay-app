@@ -6,9 +6,11 @@ import { Config } from '../config/env'
 import path from 'path'
 import 'dotenv/config'
 import authRouter from './routes/auth.routes'
+import emailRouter from './routes/email.routes'
 // import oauthRouter from './routes/oauth.routes'
 import { authRateLimiter, generalRateLimiter } from './middlewares/rate-limiter'
 import { setupDI } from '../DI/container'
+import { RabbitMQEventConsumer } from '../messaging/RabbitMQEventConsumer'
 
 // Simple logger fallback
 const logger = {
@@ -16,6 +18,10 @@ const logger = {
   error: (msg: string) => console.error(`[ERROR] ${msg}`),
   warn: (msg: string) => console.warn(`[WARN] ${msg}`)
 }
+
+// Start RabbitMQ consumer (non-blocking)
+const consumer = new RabbitMQEventConsumer()
+consumer.start().catch(err => logger.error('Failed to start RMQ consumer', err))
 
 // Setup Dependency Injection
 setupDI()
@@ -46,6 +52,9 @@ app.get('/api/v1/health', generalRateLimiter, (req, res) => {
 
 // Rutas de autenticación con rate limiting (con prefijo /api/v1)
 app.use('/api/v1/auth', authRateLimiter, authRouter)
+
+// Rutas de email (servicio a servicio, sin rate limiting)
+app.use('/api/v1/emails', emailRouter)
 
 // OAuth routes temporarily disabled for debugging
 // app.use('/auth/oauth', oauthRateLimiter, oauthRouter)

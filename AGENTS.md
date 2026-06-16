@@ -1,6 +1,6 @@
 # AGENTS.md - Petpay-app Agent Guidelines
 
-Monorepo: Identity (TS/Bun, :3000), Marketplace (Go, :8080), Catalog (Go, :8081).
+Monorepo: Identity (TS/Bun, :3000), Marketplace (Go, :8080), Catalog (Go, :8081), Payments (Rust/Axum, :8082).
 
 ---
 
@@ -33,17 +33,27 @@ go fmt ./...; go mod tidy       # Format + tidy
 golangci-lint run              # Lint
 ```
 
+### Payments Service (Rust/Axum)
+```bash
+cd payments-service
+cargo run                              # Run development
+cargo build                            # Compile
+cargo test                             # Run all tests
+cargo fmt                              # Format code
+cargo clippy                           # Run linter
+```
+
 ---
 
 ## Naming Conventions
 
-| Element | Identity (TS) | Go Services |
-|---------|---------------|-------------|
-| Files | kebab-case | snake_case |
-| Classes/Types | PascalCase | PascalCase |
-| Functions/Variables | camelCase | camelCase |
-| Constants | SCREAMING_SNAKE | PascalCase (exported), camelCase (unexported) |
-| DB/JSON | snake_case | snake_case / camelCase |
+| Element | Identity (TS) | Go Services | Payments (Rust) |
+|---------|---------------|-------------|-----------------|
+| Files | kebab-case | snake_case | snake_case |
+| Classes/Types | PascalCase | PascalCase | PascalCase |
+| Functions/Variables | camelCase | camelCase | snake_case |
+| Constants | SCREAMING_SNAKE | PascalCase (exported), camelCase (unexported) | SCREAMING_SNAKE |
+| DB/JSON | snake_case | snake_case / camelCase | snake_case |
 
 ---
 
@@ -158,8 +168,8 @@ func NewOrderService(repo repository.OrderRepository) *OrderServiceImpl {
 
 ## Database
 
-- **ORM**: Drizzle (Identity), GORM (Go services)
-- **Migrations**: Drizzle Kit (Identity), GORM AutoMigrate (Go)
+- **ORM**: Drizzle (Identity), GORM (Go services), SeaORM (Payments)
+- **Migrations**: Drizzle Kit (Identity), GORM AutoMigrate (Go), SeaSchema (Payments)
 - **Env**: Use `.env` files (never commit secrets)
 
 ---
@@ -179,6 +189,7 @@ refactor(catalog): extract product service interface
 - **Identity**: `Identity/AGENTS.md` - Clean Architecture, Drizzle, Zod, const types
 - **Marketplace**: `marketplace/AGENTS.md` - Hexagonal, GORM, ports/adapters
 - **Catalog**: `catalog-&-offers/AGENTS.md` - Hexagonal with adapters
+- **Payments**: `payments-service/AGENTS.md` - Hexagonal, Axum, SeaORM, Tokio
 
 ---
 
@@ -202,6 +213,15 @@ go test -v -run "^TestCreate$" .     # Run exact test name
 go test -cover ./...                 # Test + coverage
 go test -coverprofile=coverage.out ./...  # Generate coverage file
 go test -race ./...                  # Run with race detector
+```
+
+### Payments (Rust/Axum)
+```bash
+cargo test                             # Run all tests
+cargo test --lib                      # Library tests only
+cargo test --test payment_entity_test # Run specific test file
+cargo test -- --nocapture            # Show output
+cargo clippy                          # Linter
 ```
 
 ---
@@ -411,3 +431,109 @@ func NewNotFoundError(resource, id string) *DomainError {
 8. Use context.Context for all DB/HTTP operations
 9. Handle errors at every layer - don't ignore errors
 10. Use transactions for multi-step operations
+
+---
+
+## Skills System
+
+Este proyecto usa un sistema de **skills** (habilidades) que proporcionan patrones, convenciones y mejores prácticas específicas para cada tecnología. Las skills se cargan automáticamente según el contexto del código que se está escribiendo.
+
+### Estructura de Skills
+
+```
+~/.opencode/skills/                    # Skills globales (disponibles en todos los proyectos)
+├── sdd-*/                            # SDD workflow (spec-driven development)
+├── golang-*/                         # Go patterns
+├── react-19/                         # React 19
+├── angular-*/                        # Angular
+├── typescript/                       # TypeScript strict
+├── pytest/                           # Python testing
+├── playwright/                       # E2E testing
+└── ... (muchos más)
+
+.petpay-app/.agents/skills/           # Skills específicos del proyecto
+├── rust-*/                          # Rust patterns (best-practices, system-event-driven, etc.)
+├── kubernetes-*/                    # Kubernetes patterns
+└── ... (muchos más)
+
+skills-lock.json                       # Registry de skills activos
+```
+
+### Cómo Funciona
+
+Cuando detectas que el trabajo involucra una tecnología específica, **la skill se carga automáticamente**. Por ejemplo:
+
+| Contexto detectado | Skill que se carga |
+|-------------------|-------------------|
+| Escribiendo tests en Go | `golang-testing` |
+| Trabajando con React 19 | `react-19` |
+| Construyendo API con Gin | `golang-gin-api` |
+| Escribiendo TypeScript | `typescript` |
+| Workflow SDD | `sdd-*` (varias) |
+| Testing Identity (TS/Bun) | `identity-testing` |
+
+### SDD Workflow (Spec-Driven Development)
+
+El proyecto usa SDD para cambios sustanciales. Los comandos disponibles:
+
+```bash
+/sdd-init              # Inicializar estructura openspec/
+/sdd-explore <topic>   # Investigar antes de comprometer
+/sdd-new <change>      # Crear nuevo cambio (explore + propose)
+/sdd-propose          # Crear propuesta
+/sdd-spec              # Escribir especificaciones
+/sdd-design           # Diseño técnico
+/sdd-tasks            # Dividir en tareas
+/sdd-apply            # Implementar tareas
+/sdd-verify           # Verificar implementación
+/sdd-archive          # Archivar cambio completado
+```
+
+### Skills por Microservicio
+
+#### Identity (TypeScript/Bun)
+- **Skill principal**: `identity-testing` - Testing patterns con bun:test
+- **Usa**: `typescript`, `zod-4`
+
+#### Marketplace & Catalog (Go)
+- **Skill principal**: `golang-testing`, `golang-gin-api`, `golang-patterns`
+- **Usa**: Testing, API patterns, concurrency
+
+#### Payments (Rust/Axum)
+- **Skills disponibles en el proyecto**:
+  - `rust-best-practices` - Convenciones y patterns
+  - `rust-system-event-driven` - Eventos y concurrencia
+  - `rust-errors` - Manejo de errores
+  - `rust-backend` - Patterns para backends
+  - `rust-expert-best-practices-code-review` - Code review rules
+- **Globales útiles**: `golang-patterns` (para patrones arquitectónicos)
+
+### Cómo Usar Skills Manualmente
+
+Si necesitas cargar una skill específica:
+
+```
+1. El sistema detecta el contexto automáticamente
+2. Si no, puedes invocar la skill con el comando apropiado
+3. La skill inyecta instrucciones detalladas en el contexto
+```
+
+### Actualizar Registry de Skills
+
+Si agregas o remueves skills en el proyecto:
+
+```bash
+# El sistema actualiza automáticamente el registry
+# O manualmente:
+# Busca en .agents/skills/ y ~/.opencode/skills/
+```
+
+El archivo `skills-lock.json` mantiene el registro de skills disponibles y sus ubicaciones.
+
+### Mejores Prácticas con Skills
+
+1. **No ignores las instrucciones de la skill** - Están basadas en convenciones probadas
+2. **Carga la skill apropiada** antes de escribir código significativo
+3. **Usa SDD** para features sustanciales, no solo código inline
+4. **Consulta la skill** cuando tengas dudas de patrones específicos
+5. **Mantén el registry actualizado** si agregas skills custom al proyecto

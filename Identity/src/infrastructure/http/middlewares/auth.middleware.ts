@@ -3,19 +3,19 @@ import { NextFunction, Request, Response } from 'express'
 import { UserRole } from '../../../domain/types/Role'
 import * as jwt from 'jsonwebtoken'
 import { logger } from '../../../shared/utils/logger'
+import { Config } from '../../config/env'
 
-// Obtener la clave secreta de las variables de entorno
-const JWT_SECRET = process.env.JWT_SECRET_KEY ?? 'secret'
+const JWT_SECRET = Config.JWT_SECRET
 
 /**
  * Extrae el token JWT de la cookie o del header Authorization.
  * @param req Objeto de solicitud de Express
  * @returns El token JWT o undefined si no se encuentra
  */
-function extractToken(req: Request): string | undefined {
+function extractToken (req: Request): string | undefined {
   // 1. Primero intentar obtener del header Authorization (Bearer token)
   const authHeader = req.headers.authorization
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ') === true) {
     return authHeader.substring(7)
   }
 
@@ -37,14 +37,17 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
 
     if (token === null || token === undefined || token === '') {
       logger.warn('Acceso denegado: No se encontró token en cookies ni en Authorization header.')
-      return res.status(401).json({ message: 'Acceso no autorizado. Token no proporcionado.' })
+      // Enviamos la respuesta primero
+      res.status(401).json({ message: 'Acceso no autorizado. Token no proporcionado.' })
+      // Retornamos nada (void) para salir de la función
+      return
     }
 
     // 2. Verificar y decodificar el token
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string
       email: string
-      role: UserRole
+      role: typeof UserRole
       iat: number
       exp: number
     }
@@ -63,11 +66,12 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       logger.warn('Token inválido/expirado', { error: error.message })
-      return res.status(401).json({ message: 'Token inválido o expirado.' })
+      res.status(401).json({ message: 'Token inválido o expirado.' })
+      return // Aquí cortamos la ejecución devolviendo 'void'
     }
 
     logger.error('Error interno en el middleware de autenticación', { error })
-    return res.status(500).json({ message: 'Error interno de autenticación.' })
+    res.status(500).json({ message: 'Error interno de autenticación.' })
   }
 }
 
@@ -76,7 +80,7 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
  * Debe usarse DESPUÉS del middleware 'protect'.
  * @param allowedRoles Array de roles permitidos (ej: [UserRole.ADMIN])
  */
-export const restrictTo = (allowedRoles: UserRole[]) => {
+export const restrictTo = (allowedRoles: Array<typeof UserRole>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     // Si req.user no existe, el middleware 'protect' falló o no se usó primero.
     if (req.user == null) {

@@ -35,6 +35,9 @@ const envSchema = z.object({
   /** URL de conexión al Message Broker (RabbitMQ) */
   RABBITMQ_URL: z.string().url().min(1, 'RABBITMQ_URL is required'),
 
+  /** Nombre del exchange de RabbitMQ para eventos de dominio */
+  RABBITMQ_EXCHANGE: z.string().default('petpay.domain.events'),
+
   /** Orígenes permitidos para CORS (separados por coma) */
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000'),
 

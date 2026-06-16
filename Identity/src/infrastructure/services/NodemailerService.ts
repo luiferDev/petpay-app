@@ -168,4 +168,87 @@ export class NodemailerService implements IEmailService {
       }
     )
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public async sendInvoice (
+    to: string,
+    fullName: string,
+    invoiceNumber: string,
+    paymentStatus: string,
+    pdfAttachment: Buffer
+  ): Promise<{ success: boolean, messageId?: string, error?: any }> {
+    try {
+      logger.info('Attempting to send invoice email', {
+        to,
+        invoiceNumber,
+        paymentStatus,
+        attachmentSize: pdfAttachment.length
+      })
+
+      // Determine subject based on payment status
+      const statusSubject = paymentStatus.toLowerCase() === 'completed' || paymentStatus.toLowerCase() === 'succeeded'
+        ? 'Payment Successful'
+        : 'Payment Update'
+
+      // Use nodemailer directly for attachment support
+      const emailService = Config.EMAIL_SERVICE ?? process.env.EMAIL_SERVICE ?? 'gmail'
+      const emailUser = Config.EMAIL_USER ?? process.env.EMAIL_USER
+      const emailPassword = Config.EMAIL_PASSWORD ?? process.env.EMAIL_PASSWORD
+
+      const transporter = (emailUser !== undefined && emailUser !== '' && emailPassword !== undefined && emailPassword !== '')
+        ? nodemailer.createTransport({ service: emailService, auth: { user: emailUser, pass: emailPassword } })
+        : nodemailer.createTransport({ jsonTransport: true })
+
+      const info = await transporter.sendMail({
+        from: emailUser ?? 'noreply@petpay.com',
+        to,
+        subject: `${statusSubject} - Invoice #${invoiceNumber}`,
+        html: `
+          <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>Hello ${fullName},</h2>
+              <p>We wanted to inform you about your payment status:</p>
+              <ul>
+                <li><strong>Invoice Number:</strong> ${invoiceNumber}</li>
+                <li><strong>Payment Status:</strong> ${paymentStatus}</li>
+              </ul>
+              <p>Please find attached your invoice.</p>
+              <p>Thank you for choosing Petpay!</p>
+              <p>Best regards,<br>The Petpay Team</p>
+            </body>
+          </html>
+        `,
+        attachments: [
+          {
+            filename: `invoice-${invoiceNumber}.pdf`,
+            content: pdfAttachment
+          }
+        ]
+      })
+
+      logger.info('Invoice email sent successfully', {
+        to,
+        invoiceNumber,
+        messageId: info.messageId
+      })
+
+      return {
+        success: true,
+        messageId: info.messageId
+      }
+    } catch (error) {
+      logger.error('❌ Error sending invoice email', {
+        to,
+        invoiceNumber,
+        error: error instanceof Error ? error.message : String(error)
+      })
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
 }

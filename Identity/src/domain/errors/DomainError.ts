@@ -87,3 +87,31 @@ export class InvalidTokenError extends DomainError {
     Object.setPrototypeOf(this, InvalidTokenError.prototype)
   }
 }
+
+export class NotFoundError extends DomainError {
+  constructor (message: string = 'Resource not found') {
+    super(message, 404, 'NotFoundError')
+    Object.setPrototypeOf(this, NotFoundError.prototype)
+  }
+}
+
+export class ValidationError extends DomainError {
+  constructor (message: string = 'Validation failed') {
+    super(message, 400, 'ValidationError')
+    Object.setPrototypeOf(this, ValidationError.prototype)
+  }
+}
+
+export class ConflictError extends DomainError {
+  constructor (message: string = 'Resource already exists') {
+    super(message, 409, 'ConflictError')
+    Object.setPrototypeOf(this, ConflictError.prototype)
+  }
+}
+
+export class UnauthorizedError extends DomainError {
+  constructor (message: string = 'Unauthorized') {
+    super(message, 401, 'UnauthorizedError')
+    Object.setPrototypeOf(this, UnauthorizedError.prototype)
+  }
+}
