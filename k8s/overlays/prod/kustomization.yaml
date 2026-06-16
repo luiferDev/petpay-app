@@ -23,6 +23,10 @@ replicas:
     count: 3
   - name: prod-catalog
     count: 3
+  - name: prod-payments
+    count: 3
+  - name: prod-bookings
+    count: 3
   - name: prod-postgres
     count: 1
 
@@ -43,14 +47,28 @@ configMapGenerator:
     literals:
       - GIN_MODE=release
       - LOG_LEVEL=info
+  - name: payments-config
+    behavior: replace
+    literals:
+      - RUST_LOG=info
+      - APP_SERVER__HOST=0.0.0.0
+  - name: bookings-config
+    behavior: replace
+    literals:
+      - GIN_MODE=release
+      - LOG_LEVEL=info
 
 # Image tags for production
 images:
-  - name: petpay/identity
+  - name: petpay-app-identity
     newTag: v1.0.0
-  - name: petpay/marketplace
+  - name: petpay-app-marketplace
     newTag: v1.0.0
-  - name: petpay/catalog
+  - name: petpay-app-catalog
+    newTag: v1.0.0
+  - name: petpay-app-payments
+    newTag: v1.0.0
+  - name: petpay-app-bookings
     newTag: v1.0.0
 
 # Increase resources limits for production
@@ -85,3 +103,23 @@ patches:
     target:
       kind: Deployment
       labelSelector: app=catalog
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      labelSelector: app=payments
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      labelSelector: app=bookings

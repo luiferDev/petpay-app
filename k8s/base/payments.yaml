@@ -1,0 +1,105 @@
+# Payments Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: petpay
+  labels:
+    app: payments
+    app.kubernetes.io/name: payments
+    app.kubernetes.io/part-of: petpay-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments
+  template:
+    metadata:
+      labels:
+        app: payments
+        app.kubernetes.io/name: payments
+        app.kubernetes.io/part-of: petpay-app
+    spec:
+      containers:
+        - name: payments
+          image: petpay-app-payments:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: payments-config
+            - secretRef:
+                name: petpay-secrets
+          env:
+            - name: APP_DATABASE__URL
+              valueFrom:
+                secretKeyRef:
+                  name: petpay-secrets
+                  key: DATABASE_URL
+                  optional: true
+            - name: APP_JWT__SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: petpay-secrets
+                  key: JWT_SECRET
+                  optional: true
+            - name: APP_IDENTITY__SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: petpay-secrets
+                  key: IDENTITY_SERVICE_API_KEY
+                  optional: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: payments
+                topologyKey: kubernetes.io/hostname
+---
+# Payments Service - ClusterIP (internal communication)
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments
+  namespace: petpay
+  labels:
+    app: payments
+    app.kubernetes.io/part-of: petpay-app
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8083
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: payments

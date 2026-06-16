@@ -39,3 +39,35 @@ data:
   PORT: "8081"
   GIN_MODE: "release"
   LOG_LEVEL: "info"
+---
+# ConfigMap para Payments Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payments-config
+  namespace: petpay
+  labels:
+    app: payments
+    app.kubernetes.io/part-of: petpay-app
+data:
+  APP_SERVER__PORT: "8083"
+  APP_SERVER__HOST: "0.0.0.0"
+  RUST_LOG: "info"
+  APP_PAYPAL__MODE: "sandbox"
+  APP_IDENTITY__SERVICE_URL: "http://identity:3000"
+  APP_MARKETPLACE__SERVICE_URL: "http://marketplace:8080"
+  APP_PDF__STORAGE_PATH: "/app/pdfs"
+---
+# ConfigMap para Bookings Service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bookings-config
+  namespace: petpay
+  labels:
+    app: bookings
+    app.kubernetes.io/part-of: petpay-app
+data:
+  PORT: "8082"
+  GIN_MODE: "release"
+  LOG_LEVEL: "info"

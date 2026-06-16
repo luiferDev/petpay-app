@@ -14,6 +14,8 @@ resources:
   - identity.yaml
   - marketplace.yaml
   - catalog.yaml
+  - payments.yaml
+  - bookings.yaml
   - ingress.yaml
 
 # Common labels for all resources
@@ -29,12 +31,20 @@ replicas:
     count: 2
   - name: catalog
     count: 2
+  - name: payments
+    count: 2
+  - name: bookings
+    count: 2
 
 # Image updates
 images:
-  - name: petpay/identity
+  - name: petpay-app-identity
     newTag: latest
-  - name: petpay/marketplace
+  - name: petpay-app-marketplace
     newTag: latest
-  - name: petpay/catalog
+  - name: petpay-app-catalog
+    newTag: latest
+  - name: petpay-app-payments
+    newTag: latest
+  - name: petpay-app-bookings
     newTag: latest

@@ -80,9 +80,18 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: marketplace
+                name: payments
                 port:
-                  number: 8080
+                  number: 8083
+          
+          # Bookings Service routes
+          - path: /api/v1/bookings
+            pathType: Prefix
+            backend:
+              service:
+                name: bookings
+                port:
+                  number: 8082
           
           # Catalog Service routes
           - path: /api/v1/products
@@ -147,3 +156,17 @@ spec:
                 name: catalog
                 port:
                   number: 8081
+          - path: /api/v1/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payments
+                port:
+                  number: 8083
+          - path: /api/v1/bookings
+            pathType: Prefix
+            backend:
+              service:
+                name: bookings
+                port:
+                  number: 8082

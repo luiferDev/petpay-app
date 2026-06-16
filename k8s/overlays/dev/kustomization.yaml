@@ -17,6 +17,18 @@ labels:
       env: development
 
 # Patch replicas for development (single instance)
+configMapGenerator:
+  - name: payments-config
+    behavior: replace
+    literals:
+      - RUST_LOG=debug
+      - APP_SERVER__HOST=0.0.0.0
+  - name: bookings-config
+    behavior: replace
+    literals:
+      - GIN_MODE=debug
+      - LOG_LEVEL=debug
+
 replicas:
   - name: dev-identity
     count: 1
@@ -24,14 +36,22 @@ replicas:
     count: 1
   - name: dev-catalog
     count: 1
+  - name: dev-payments
+    count: 1
+  - name: dev-bookings
+    count: 1
   - name: dev-postgres
     count: 1
 
 # Image tags for development
 images:
-  - name: petpay/identity
+  - name: petpay-app-identity
     newTag: dev-latest
-  - name: petpay/marketplace
+  - name: petpay-app-marketplace
     newTag: dev-latest
-  - name: petpay/catalog
+  - name: petpay-app-catalog
+    newTag: dev-latest
+  - name: petpay-app-payments
+    newTag: dev-latest
+  - name: petpay-app-bookings
     newTag: dev-latest
