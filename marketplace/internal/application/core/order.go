@@ -13,7 +13,7 @@ type Order struct {
 	Tax float64 `gorm:"column:tax" json:"tax"`
 	Discount float64 `gorm:"column:discount" json:"discount"`
 	TotalAmount float64 `gorm:"column:total_amount" json:"totalAmount"`
-	Currency float64 `gorm:"column:currency" json:"currency"`
+	Currency string `gorm:"column:currency;size:3" json:"currency"`
 	ShippingAddressId string `gorm:"column:shipping_address_id; index" json:"shippingAddressId"`
 	BillingAddressId string `gorm:"column:billing_address_id; index" json:"billingAddressId"`
 	TrackingNumber uint64 `gorm:"column:tracking_number" json:"trackingNumber"`
