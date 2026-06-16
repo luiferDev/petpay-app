@@ -1,0 +1,113 @@
+[package]
+name = "payments-service"
+version = "0.1.0"
+edition = "2021"
+description = "Payment & Invoice microservice for Petpay platform"
+
+[lib]
+name = "payments_service"
+path = "src/lib.rs"
+
+[[bin]]
+name = "payments-service"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = "0.8.8"
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.6.8", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1.50.0", features = ["full"] }
+
+# Database
+sea-orm = { version = "1.1.19", features = [
+  "sqlx-postgres",
+  "runtime-tokio-native-tls",
+  "macros",
+] }
+sea-orm-migration = { version = "1.1.19", features = [
+  "runtime-tokio-native-tls",
+  "sqlx-postgres",
+] }
+sqlx = { version = "0.8.6", features = [
+  "postgres",
+  "runtime-tokio-native-tls",
+  "chrono",
+  "uuid",
+] }
+
+# Serialization
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+
+# Validation
+validator = { version = "0.20.0", features = ["derive"] }
+
+# Error handling
+thiserror = "2.0.18"
+anyhow = "1.0.102"
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Decimal
+rust_decimal = { version = "1.40.0", features = ["serde", "serde-with-str"] }
+rust_decimal_macros = "1.40.0"
+
+# Date/Time
+chrono = { version = "0.4.44", features = ["serde"] }
+
+# Async HTTP client
+reqwest = { version = "0.13", features = [
+  "json",
+  "rustls",
+], default-features = false }
+
+# PDF generation
+printpdf = "0.9.1"
+
+# Logging
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tracing-appender = "0.2.4"
+
+# Environment
+dotenv = "0.15.0"
+config = "0.15.21"
+
+# JWT
+jsonwebtoken = "10.3.0"
+
+# Time parsing
+chrono-tz = "0.10.4"
+
+# Async trait
+async-trait = "0.1.89"
+
+# Base64 encoding
+base64 = "0.22"
+
+# Message queue (RabbitMQ)
+lapin = "2.5"
+tokio-stream = "0.1"
+futures-util = "0.3"
+
+[dev-dependencies]
+# Testing
+mockall = "0.14.0"
+tokio-test = "0.4.5"
+
+# Test database
+testcontainers = "0.27.1"
+testcontainers-modules = { version = "0.15.0", features = ["postgres"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# Lints configuration - forbidden unsafe code
+[lints.rust]
+unsafe_code = "forbid"
