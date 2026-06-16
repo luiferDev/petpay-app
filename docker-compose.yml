@@ -11,11 +11,11 @@ services:
       - ./Identity/.env
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:changeme@postgres:5432/petpay
+      - DATABASE_URL=postgresql://postgres:changeme@postgres:5432/petpay_identity
       - JWT_SECRET=changeme-jwt-secret-min-32-chars
       - JWT_EXPIRES_IN=7d
       - PORT=3000
-      - RABBITMQ_URL=amqp://localhost:5672
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - OAUTH_STATE_SECRET=changeme-oauth-state-secret-min-32
       - REDIS_URL=redis://redis:6379
     depends_on:
@@ -40,7 +40,7 @@ services:
       - DB_HOST=postgres
       - DB_USER=postgres
       - DB_PASSWORD=changeme
-      - DB_NAME=petpay
+      - DB_NAME=petpay_marketplace
       - DB_PORT=5432
       - PORT=8080
     depends_on:
@@ -63,7 +63,7 @@ services:
       - DB_HOST=postgres
       - DB_USER=postgres
       - DB_PASSWORD=changeme
-      - DB_NAME=petpay
+      - DB_NAME=petpay_catalog
       - DB_PORT=5432
       - PORT=8081
     depends_on:
@@ -86,7 +86,7 @@ services:
       - DB_HOST=postgres
       - DB_USER=postgres
       - DB_PASSWORD=changeme
-      - DB_NAME=petpay
+      - DB_NAME=petpay_bookings
       - DB_PORT=5432
       - PORT=8082
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
@@ -98,6 +98,47 @@ services:
     networks:
       - petpay-network
     restart: unless-stopped
+
+  # Payments Service
+  payments:
+    build:
+      context: ./payments-service
+      dockerfile: Dockerfile
+    container_name: petpay-payments
+    ports:
+      - "8083:8083"
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+      - APP_DATABASE__URL=postgresql://postgres:changeme@postgres:5432/petpay_payments
+      - APP_SERVER__PORT=8083
+      - APP_SERVER__HOST=0.0.0.0
+      - APP_JWT__SECRET=changeme-jwt-secret-min-32-chars
+      - APP_STRIPE__API_KEY=${STRIPE_API_KEY:-sk_test_placeholder}
+      - APP_PAYPAL__CLIENT_ID=${PAYPAL_CLIENT_ID:-placeholder}
+      - APP_PAYPAL__CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-placeholder}
+      - APP_PAYPAL__MODE=sandbox
+      - APP_IDENTITY__SERVICE_URL=http://identity:3000
+      - APP_IDENTITY__SERVICE_API_KEY=changeme-identity-api-key
+      - APP_MARKETPLACE__SERVICE_URL=http://marketplace:8080
+      - APP_PDF__STORAGE_PATH=/app/pdfs
+    volumes:
+      - ./payments-service/.env.example:/app/.env:ro
+      - pdf-storage:/app/pdfs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    networks:
+      - petpay-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # RabbitMQ Message Broker
   rabbitmq:
@@ -132,6 +173,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - petpay-network
     restart: unless-stopped
@@ -166,7 +208,7 @@ services:
       dockerfile: Dockerfile
     container_name: petpay-krakend
     ports:
-      - "8080:8080"
+      - "8000:8080"
     volumes:
       - ./krakend/krakend.json:/etc/krakend/krakend.json:ro
     depends_on:
@@ -177,6 +219,8 @@ services:
       catalog:
         condition: service_started
       bookings:
+        condition: service_started
+      payments:  # Add payments dependency
         condition: service_started
     networks:
       - petpay-network
@@ -215,3 +259,4 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  pdf-storage:

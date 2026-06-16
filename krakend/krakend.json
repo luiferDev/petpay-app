@@ -220,6 +220,138 @@
       ]
     },
     {
+      "endpoint": "/api/v1/payments",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        },
+        "qos/ratelimit/proxy": {
+          "max_rate": 20,
+          "strategy": "token-bucket"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/payments",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/payments",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/payments",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/payments/{id}",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/payments/{id}",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/invoices",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/invoices",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/invoices/{id}",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/invoices/{id}",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/invoices/{id}/pdf",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/invoices/{id}/pdf",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/coupons/validate",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/coupons/validate",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/coupons/apply",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "roles_key": "roles",
+          "roles": ["user", "admin"]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/v1/coupons/apply",
+          "host": ["http://payments:8083"]
+        }
+      ]
+    },
+    {
       "endpoint": "/api/v1/marketplace/products",
       "method": "GET",
       "backend": [
