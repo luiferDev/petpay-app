@@ -413,19 +413,19 @@ func NewRabbitMQPublisher(url string) (*RabbitMQPublisher, error) {
         return nil, fmt.Errorf("failed to open channel: %w", err)
     }
     
-    // Declare exchange
-    err = ch.ExchangeDeclare("petpay.events", "topic", true, false, false, false, nil)
-    if err != nil {
-        return nil, fmt.Errorf("failed to declare exchange: %w", err)
-    }
-    
-    return &RabbitMQPublisher{conn: conn, channel: ch}, nil
+	// Declare exchange
+	err = ch.ExchangeDeclare("petpay.domain.events", "topic", true, false, false, false, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare exchange: %w", err)
+	}
+	
+	return &RabbitMQPublisher{conn: conn, channel: ch}, nil
 }
 
 func (p *RabbitMQPublisher) PublishBookingCreated(ctx context.Context, event *ports.BookingEvent) error {
-    body, _ := json.Marshal(event)
-    return p.channel.PublishWithContext(ctx,
-        "petpay.events",
+	body, _ := json.Marshal(event)
+	return p.channel.PublishWithContext(ctx,
+		"petpay.domain.events",
         "booking.created",
         false, false,
         amqp.Publishing{

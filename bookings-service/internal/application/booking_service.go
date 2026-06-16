@@ -43,8 +43,10 @@ func (s *BookingService) CreateBooking(ctx context.Context, booking *domain.Book
 		return nil, fmt.Errorf("failed to create booking: %w", err)
 	}
 
-	if err := s.events.PublishBookingCreated(ctx, fmt.Sprintf("%d", created.ID)); err != nil {
-		fmt.Printf("Warning: failed to publish booking created event: %v\n", err)
+	if s.events != nil {
+		if err := s.events.PublishBookingCreated(ctx, fmt.Sprintf("%d", created.ID)); err != nil {
+			fmt.Printf("Warning: failed to publish booking created event: %v\n", err)
+		}
 	}
 
 	if customerEmail != "" {
@@ -100,12 +102,16 @@ func (s *BookingService) UpdateBookingStatus(ctx context.Context, id string, sta
 
 	switch status {
 	case domain.BookingStatusConfirmed:
-		if err := s.events.PublishBookingConfirmed(ctx, id); err != nil {
-			fmt.Printf("Warning: failed to publish booking confirmed event: %v\n", err)
+		if s.events != nil {
+			if err := s.events.PublishBookingConfirmed(ctx, id); err != nil {
+				fmt.Printf("Warning: failed to publish booking confirmed event: %v\n", err)
+			}
 		}
 	case domain.BookingStatusCompleted:
-		if err := s.events.PublishBookingCompleted(ctx, id); err != nil {
-			fmt.Printf("Warning: failed to publish booking completed event: %v\n", err)
+		if s.events != nil {
+			if err := s.events.PublishBookingCompleted(ctx, id); err != nil {
+				fmt.Printf("Warning: failed to publish booking completed event: %v\n", err)
+			}
 		}
 		if customerEmail != "" {
 			if err := s.email.SendBookingCompletion(customerEmail, id); err != nil {
@@ -114,8 +120,10 @@ func (s *BookingService) UpdateBookingStatus(ctx context.Context, id string, sta
 		}
 	case domain.BookingStatusCancelled:
 		reason := "Cancelled by user"
-		if err := s.events.PublishBookingCancelled(ctx, id, reason); err != nil {
-			fmt.Printf("Warning: failed to publish booking cancelled event: %v\n", err)
+		if s.events != nil {
+			if err := s.events.PublishBookingCancelled(ctx, id, reason); err != nil {
+				fmt.Printf("Warning: failed to publish booking cancelled event: %v\n", err)
+			}
 		}
 		if customerEmail != "" {
 			if err := s.email.SendBookingCancellation(customerEmail, id, reason); err != nil {
@@ -149,8 +157,10 @@ func (s *BookingService) CancelBooking(ctx context.Context, id, reason, customer
 		return nil, fmt.Errorf("failed to cancel booking: %w", err)
 	}
 
-	if err := s.events.PublishBookingCancelled(ctx, id, reason); err != nil {
-		fmt.Printf("Warning: failed to publish booking cancelled event: %v\n", err)
+	if s.events != nil {
+		if err := s.events.PublishBookingCancelled(ctx, id, reason); err != nil {
+			fmt.Printf("Warning: failed to publish booking cancelled event: %v\n", err)
+		}
 	}
 
 	if customerEmail != "" {

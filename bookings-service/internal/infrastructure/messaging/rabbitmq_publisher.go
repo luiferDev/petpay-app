@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"sync"
 	"time"
 
 	"petpay/bookings-service/internal/ports"
@@ -13,47 +15,141 @@ import (
 
 const (
 	DomainEventsExchange = "petpay.domain.events"
+	DLXExchange         = "petpay.domain.events.dlx"
 )
 
 type RabbitMQPublisher struct {
+	mu      sync.RWMutex
 	conn    *amqp.Connection
 	channel *amqp.Channel
+	url     string
+
+	closeChan chan struct{}
 }
 
-func NewRabbitMQPublisher(url string) (ports.EventPublisher, error) {
-	conn, err := amqp.Dial(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+func NewRabbitMQPublisher(url string) ports.EventPublisher {
+	p := &RabbitMQPublisher{
+		url:       url,
+		closeChan: make(chan struct{}),
 	}
 
-	channel, err := conn.Channel()
-	if err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("failed to open channel: %w", err)
-	}
+	go p.keepConnected()
 
-	err = channel.ExchangeDeclare(
-		DomainEventsExchange,
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		channel.Close()
-		conn.Close()
-		return nil, fmt.Errorf("failed to declare exchange: %w", err)
-	}
+	return p
+}
 
-	return &RabbitMQPublisher{
-		conn:    conn,
-		channel: channel,
-	}, nil
+func (p *RabbitMQPublisher) keepConnected() {
+	backoff := 100 * time.Millisecond
+	maxBackoff := 30 * time.Second
+
+	for {
+		select {
+		case <-p.closeChan:
+			return
+		default:
+		}
+
+		conn, err := amqp.Dial(p.url)
+		if err != nil {
+			log.Printf("RabbitMQ connection failed: %v, retrying in %v", err, backoff)
+			time.Sleep(backoff)
+			backoff = time.Duration(min(int64(backoff)*2, int64(maxBackoff)))
+			continue
+		}
+
+		backoff = 100 * time.Millisecond
+
+		channel, err := conn.Channel()
+		if err != nil {
+			log.Printf("RabbitMQ channel creation failed: %v", err)
+			conn.Close()
+			continue
+		}
+
+		if err := channel.ExchangeDeclare(
+			DLXExchange,
+			"fanout",
+			true,
+			false,
+			false,
+			false,
+			nil,
+		); err != nil {
+			log.Printf("RabbitMQ DLX exchange declare failed: %v", err)
+			channel.Close()
+			conn.Close()
+			continue
+		}
+
+		if err := channel.ExchangeDeclare(
+			DomainEventsExchange,
+			"topic",
+			true,
+			false,
+			false,
+			false,
+			amqp.Table{
+				"x-dead-letter-exchange": DLXExchange,
+			},
+		); err != nil {
+			log.Printf("RabbitMQ exchange declare failed: %v", err)
+			channel.Close()
+			conn.Close()
+			continue
+		}
+
+		p.mu.Lock()
+		if p.conn != nil {
+			p.conn.Close()
+		}
+		if p.channel != nil {
+			p.channel.Close()
+		}
+		p.conn = conn
+		p.channel = channel
+		p.mu.Unlock()
+
+		log.Printf("RabbitMQ connected, exchange %q declared", DomainEventsExchange)
+
+		notifyClose := conn.NotifyClose(make(chan *amqp.Error))
+		select {
+		case <-p.closeChan:
+			p.mu.Lock()
+			p.channel.Close()
+			p.conn.Close()
+			p.channel = nil
+			p.conn = nil
+			p.mu.Unlock()
+			return
+		case err := <-notifyClose:
+			if err != nil {
+				log.Printf("RabbitMQ connection closed: %v, reconnecting...", err)
+			} else {
+				log.Printf("RabbitMQ connection closed gracefully, reconnecting...")
+			}
+			p.mu.Lock()
+			p.channel = nil
+			p.conn = nil
+			p.mu.Unlock()
+		}
+	}
+}
+
+func (p *RabbitMQPublisher) isConnected() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.conn != nil && p.channel != nil
 }
 
 func (p *RabbitMQPublisher) publish(ctx context.Context, routingKey string, payload interface{}) error {
+	p.mu.RLock()
+	ch := p.channel
+	p.mu.RUnlock()
+
+	if ch == nil {
+		return fmt.Errorf("RabbitMQ not connected")
+	}
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
@@ -66,7 +162,7 @@ func (p *RabbitMQPublisher) publish(ctx context.Context, routingKey string, payl
 		Timestamp:    time.Now(),
 	}
 
-	return p.channel.PublishWithContext(
+	return ch.PublishWithContext(
 		ctx,
 		DomainEventsExchange,
 		routingKey,
@@ -125,6 +221,9 @@ func (p *RabbitMQPublisher) PublishBookingRescheduled(ctx context.Context, booki
 }
 
 func (p *RabbitMQPublisher) Close() error {
+	close(p.closeChan)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.channel != nil {
 		p.channel.Close()
 	}

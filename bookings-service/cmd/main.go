@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"petpay/bookings-service/internal/application"
 	"petpay/bookings-service/internal/domain"
 	"petpay/bookings-service/internal/infrastructure/config"
-	"petpay/bookings-service/internal/infrastructure/http"
+	infrahttp "petpay/bookings-service/internal/infrastructure/http"
 	"petpay/bookings-service/internal/infrastructure/messaging"
 	"petpay/bookings-service/internal/infrastructure/persistence"
 
@@ -30,26 +36,40 @@ func main() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQ.URL)
-	if err != nil {
-		log.Printf("Warning: failed to connect to RabbitMQ: %v", err)
-		publisher = nil
-	}
-	if publisher != nil {
-		defer publisher.Close()
-	}
+	publisher := messaging.NewRabbitMQPublisher(cfg.RabbitMQ.URL)
+	defer publisher.Close()
 
-	emailClient := http.NewIdentityEmailClient(cfg.Identity.BaseURL, cfg.Identity.APIKey)
+	emailClient := infrahttp.NewIdentityEmailClient(cfg.Identity.BaseURL, cfg.Identity.APIKey)
 
 	repo := persistence.NewBookingRepository(db)
 	service := application.NewBookingService(repo, publisher, emailClient)
-	handler := http.NewBookingHandler(service)
+	handler := infrahttp.NewBookingHandler(service)
 
-	router := http.NewRouter(handler)
+	router := infrahttp.NewRouter(handler)
 
 	addr := fmt.Sprintf("%s:%d", cfg.App.Host, cfg.App.Port)
-	log.Printf("Starting bookings service on %s", addr)
-	if err := router.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: router,
 	}
+
+	go func() {
+		log.Printf("Bookings service starting on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	log.Println("Server exited")
 }
