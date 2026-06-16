@@ -1,0 +1,297 @@
+# ===================================================================
+# PETPAY-APP - Integration Test Docker Compose
+# ===================================================================
+# Standalone compose file for running integration tests.
+# Mirrors the main docker-compose.yml but with test-specific config.
+# All services connect to the petpay-test-network.
+# ===================================================================
+
+services:
+  # === Test Runner ===
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-runner
+    container_name: petpay-test-runner
+    volumes:
+      - ../../:/app
+    working_dir: /app
+    networks:
+      - petpay-test-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+      marketplace:
+        condition: service_started
+      catalog:
+        condition: service_started
+      bookings:
+        condition: service_started
+      payments:
+        condition: service_started
+      krakend:
+        condition: service_started
+    command: ["sleep", "infinity"]
+
+  # === Identity Service ===
+  identity:
+    build:
+      context: ../../Identity
+      dockerfile: Dockerfile
+    container_name: petpay-test-identity
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../../Identity/.env
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=postgresql://postgres:changeme@postgres:5432/petpay_identity
+      - JWT_SECRET=test-jwt-secret-min-32-chars-for-testing
+      - JWT_EXPIRES_IN=1h
+      - PORT=3000
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - OAUTH_STATE_SECRET=test-oauth-state-secret-min-32-chars
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # === Marketplace Service ===
+  marketplace:
+    build:
+      context: ../../marketplace
+      dockerfile: Dockerfile
+    container_name: petpay-test-marketplace
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=test
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay_marketplace
+      - DB_PORT=5432
+      - PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # === Catalog & Offers Service ===
+  catalog:
+    build:
+      context: ../../catalog-&-offers
+      dockerfile: Dockerfile
+    container_name: petpay-test-catalog
+    ports:
+      - "8081:8081"
+    environment:
+      - GIN_MODE=test
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay_catalog
+      - DB_PORT=5432
+      - PORT=8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # === Bookings Service ===
+  bookings:
+    build:
+      context: ../../bookings-service
+      dockerfile: Dockerfile
+    container_name: petpay-test-bookings
+    ports:
+      - "8082:8082"
+    environment:
+      - GIN_MODE=test
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=changeme
+      - DB_NAME=petpay_bookings
+      - DB_PORT=5432
+      - PORT=8082
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # === Payments Service ===
+  payments:
+    build:
+      context: ../../payments-service
+      dockerfile: Dockerfile
+    container_name: petpay-test-payments
+    ports:
+      - "8083:8083"
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+      - APP_DATABASE__URL=postgresql://postgres:changeme@postgres:5432/petpay_payments
+      - APP_SERVER__PORT=8083
+      - APP_SERVER__HOST=0.0.0.0
+      - APP_JWT__SECRET=test-jwt-secret-min-32-chars-for-testing
+      - APP_STRIPE__API_KEY=sk_test_placeholder
+      - APP_PAYPAL__CLIENT_ID=placeholder
+      - APP_PAYPAL__CLIENT_SECRET=placeholder
+      - APP_PAYPAL__MODE=sandbox
+      - APP_IDENTITY__SERVICE_URL=http://identity:3000
+      - APP_IDENTITY__SERVICE_API_KEY=test-identity-api-key
+      - APP_MARKETPLACE__SERVICE_URL=http://marketplace:8080
+      - APP_PDF__STORAGE_PATH=/tmp/pdfs
+    volumes:
+      - test-pdf-storage:/tmp/pdfs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # === RabbitMQ ===
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: petpay-test-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - test-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # === PostgreSQL ===
+  postgres:
+    image: postgres:16-alpine
+    container_name: petpay-test-postgres
+    environment:
+      - POSTGRES_DB=petpay
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changeme
+    ports:
+      - "5433:5432"
+    volumes:
+      - test-postgres-data:/var/lib/postgresql/data
+      - ../../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  # === Redis ===
+  redis:
+    image: redis:7-alpine
+    container_name: petpay-test-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - test-redis-data:/data
+    networks:
+      - petpay-test-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # === KrakenD API Gateway ===
+  krakend:
+    build:
+      context: ../../krakend
+      dockerfile: Dockerfile
+    container_name: petpay-test-krakend
+    ports:
+      - "8000:8080"
+    volumes:
+      - ../../krakend/krakend.json:/etc/krakend/krakend.json:ro
+    depends_on:
+      identity:
+        condition: service_started
+      marketplace:
+        condition: service_started
+      catalog:
+        condition: service_started
+      bookings:
+        condition: service_started
+      payments:
+        condition: service_started
+    networks:
+      - petpay-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+networks:
+  petpay-test-network:
+    driver: bridge
+
+volumes:
+  test-postgres-data:
+  test-redis-data:
+  test-rabbitmq-data:
+  test-pdf-storage:
