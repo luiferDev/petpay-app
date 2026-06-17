@@ -1,0 +1,39 @@
+# Server Configuration
+server:
+  port: 8083
+  host: "0.0.0.0"
+
+# Database Configuration
+database:
+  url: "postgresql://postgres:password@localhost:5432/petpay"
+
+# JWT Configuration
+jwt:
+  secret: "your-jwt-secret-min-10-chars"
+
+# Payment Providers
+stripe:
+  api_key: "sk_test_your_stripe_key"
+  webhook_secret: "whsec_your_webhook_secret"
+
+paypal:
+  client_id: "your_paypal_client_id"
+  client_secret: "your_paypal_client_secret"
+  mode: "sandbox"
+
+# Identity Service
+identity:
+  service_url: "http://identity:3000"
+  service_api_key: "your-identity-service-api-key"
+
+# Marketplace Service
+marketplace:
+  service_url: "http://marketplace:8080"
+
+# PDF Storage
+pdf:
+  storage_path: "/app/pdfs"
+
+# RabbitMQ
+rabbitmq:
+  url: "amqp://guest:guest@localhost:5672"
