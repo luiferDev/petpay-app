@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "skills": {
+    "go-concurrency": {
+      "source": "cxuu/golang-skills",
+      "sourceType": "github",
+      "computedHash": "6d304569a363a8a6221fdbce54f38f4107f5a7f3982a9416c10803de37264384"
+    },
+    "kubernetes-architect": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "932064b2d9e7159cd3394fabe23cc98f163e230843690d229f1398ca835b7f02"
+    },
+    "kubernetes-specialist": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "0201bb26821bd6de6ea341f45da863ef70bba0b44363da72f26b7bf7c86869e9"
+    },
+    "rust-async-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "1e68b5edfa95069e54af75acf2a34634a5d0266021fa4af3b9706eaec5b6207e"
+    },
+    "rust-backend": {
+      "source": "windmill-labs/windmill",
+      "sourceType": "github",
+      "computedHash": "7dc1c8fd3dd739f73244227e841ff2b4eec247bbbc6f972b0378fcdd62d210dc"
+    },
+    "rust-best-practices": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "computedHash": "fd336f2f772eb46ddf8658de5f9dd8faa1f35615b316665307fc82eeb4b2e658"
+    },
+    "rust-call-graph": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "0999fbe783c81b87ba1dc1347758bd87b5880dca0d66c69be53bbac133a4c888"
+    },
+    "rust-code-navigator": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "c5c5b9521be30a3b5a3d6fa122bf9df809af3b28760e06fa317d6afab5bb3939"
+    },
+    "rust-desktop-applications": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "b380d450b0d1e2ecb8da058617451b17c14f0eb7cdd2ed889c021e692f8123f8"
+    },
+    "rust-engineer": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "5a8b4c69ded4bec7009af144c8aea3de5f463765f211c780afea8d7a47fb35e6"
+    },
+    "rust-errors": {
+      "source": "epicenterhq/epicenter",
+      "sourceType": "github",
+      "computedHash": "3a7054095226cfd2849fecce386888c530419ab24e4c7e8f493c343b21e49ac0"
+    },
+    "rust-expert-best-practices-code-review": {
+      "source": "wispbit-ai/skills",
+      "sourceType": "github",
+      "computedHash": "52ff442592ca9c1488b5d03d8fcb22cc7281596264d15ba0817b89918150c2bb"
+    },
+    "rust-learner": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "12e6434334fc6f131f09f35cbb53871d0d4c753fd404c1337e9c48ad5a9a1dbf"
+    },
+    "rust-pro": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "efe90b6c467a058dc53de4bb4238a56228f6f3a4098ffec8128120750018cd0f"
+    },
+    "rust-refactor-helper": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "614d54b2b16a57965412a3fff048c6d36e6f1535fcbb9ac2cf71e7a987e5a119"
+    },
+    "rust-router": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "ff5616fc8a0ef0d9434f1041e5128eb0f381d3484921ee8bfd009d64ad57045b"
+    },
+    "rust-skill-creator": {
+      "source": "zhanghandong/rust-skills",
+      "sourceType": "github",
+      "computedHash": "0314bb7b61f6e7be24a498b7fb45969f78924e81c2f74723badb056724697119"
+    },
+    "rust-skills": {
+      "source": "leonardomso/rust-skills",
+      "sourceType": "github",
+      "computedHash": "46bd078eef99d07cf5544129e24f917646a39cda58672233c559d3fa6af68369"
+    },
+    "rust-system-event-driven": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "8b2d3b9b6b351844cbcdaa08a4cd96fddb5486579309745cfa4c1a3b9cb6ee59"
+    }
+  }
+}
